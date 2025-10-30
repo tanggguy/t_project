@@ -1,0 +1,12 @@
+yfinance
+backtrader
+pandas-ta
+optuna
+pandas
+numpy
+matplotlib
+plotly
+pyyaml
+python-dotenv
+jupyter
+pytest
