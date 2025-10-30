@@ -1,0 +1,44 @@
+# ==================================
+# CONFIGURATION GLOBALE DU PROJET
+# ==================================
+# Ce fichier centralise tous les paramètres de haut niveau
+# pour le backtesting, les données et le broker.
+
+# --- Paramètres Généraux du Projet ---
+project:
+    # Timezone pour normaliser les timestamps (ex: 'UTC', 'Europe/Paris', 'America/New_York')
+    # Important pour yfinance et backtrader.
+    timezone: "Europe/Paris"
+
+# --- Paramètres du Data Manager (utils/data_manager.py) ---
+data:
+    # Périodes par défaut si non spécifiées lors du téléchargement
+    default_start_date: "2015-01-01"
+    default_end_date: "2024-12-31"
+    
+    # Répertoire de cache (tel que défini dans README.md et .gitignore)
+    cache_dir: "data/cache/"
+    
+    # Intervalle de données par défaut (ex: '1d' pour jour, '1h' pour heure)
+    default_interval: "1d"
+
+# --- Paramètres du Moteur de Backtest (backtesting/engine.py) ---
+backtest:
+    # Capital initial pour chaque backtest
+    initial_capital: 10000.0
+
+# --- Paramètres du Broker (pour la simulation Backtrader) ---
+broker:
+    # Commission en pourcentage (ex: 0.001 pour 0.1%)
+    commission_pct: 0.001
+    
+    # Commission fixe (ex: 1.5 pour 1.50€ par ordre)
+    # Mettez 'null' ou commentez si vous utilisez 'commission_pct'
+    commission_fixed: null 
+    
+    # Type de commission à utiliser par Backtrader
+    # Options possibles : 'percentage', 'fixed'
+    commission_type: "percentage" 
+
+    # Paramètre de slippage (ex: 0.0005 pour 0.05%)
+    slippage_pct: 0.0005

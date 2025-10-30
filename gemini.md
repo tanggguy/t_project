@@ -24,6 +24,7 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
     * La gestion des données (`utils/data_manager.py`) est séparée de la logique de stratégie (`strategies/`).
     * Le script de backtest (`scripts/run_backtest.py`) est séparé de la logique d'optimisation (`optimization/`).
 4.  **"Data-Driven" :** La logique de `backtrader` doit rester simple. L'essentiel du calcul d'indicateurs se fait en amont avec `pandas-ta` et est injecté dans le DataFrame *avant* le backtest.
+5. Pose des questions si necessaire.
 
 ---
 
