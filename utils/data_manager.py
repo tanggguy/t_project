@@ -174,14 +174,21 @@ class DataManager:
             f"Téléchargement yfinance: {ticker} ({interval}) de {start_date} à {end_date}"
         )
         try:
-            df = yf.download(
-                tickers=ticker,
+            # Correction: Utiliser yf.Ticker pour une meilleure stabilité
+            # avec les versions récentes de pandas/yfinance.
+            tk = yf.Ticker(ticker)
+            df = tk.history(
                 start=start_date,
                 end=end_date,
                 interval=interval,
-                auto_adjust=True,  # Ajuste pour splits/dividendes
-                progress=False,  # Désactive la barre de progression
+                auto_adjust=True,  # Garde l'ajustement pour splits/dividendes
             )
+
+            # Si le téléchargement échoue (ex: ticker invalide), tk.history
+            # peut retourner un DataFrame vide avant de lever une erreur.
+            if df.empty:
+                logger.warning(f"Aucune donnée retournée par yf.Ticker pour {ticker}.")
+                return pd.DataFrame()
 
             # Renommer les colonnes en minuscules (préféré par backtrader)
             df.rename(
@@ -262,6 +269,7 @@ class DataManager:
 
         except Exception as e:
             logger.error(f"Échec de l'ajout des indicateurs : {e}")
+            raise e  # <-- AJOUTEZ CETTE LIGNE
 
         return df
 

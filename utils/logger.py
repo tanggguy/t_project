@@ -1,8 +1,16 @@
+# --- 1. Bibliothèques natives ---
 import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-def setup_logger(name, log_file='logs/trading_project.log', level=logging.INFO):
+# --- 2. Bibliothèques tierces ---
+import coloredlogs  # <--- NOUVEL IMPORT
+
+# --- 3. Imports locaux du projet ---
+# (Aucun dans ce fichier)
+
+
+def setup_logger(name, log_file="logs/trading_project.log", level=logging.INFO):
     """Function to setup as many loggers as you want"""
 
     # Create logs directory if it doesn't exist
@@ -10,28 +18,44 @@ def setup_logger(name, log_file='logs/trading_project.log', level=logging.INFO):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # File handler
-    file_handler = RotatingFileHandler(log_file, maxBytes=1024*1024*5, backupCount=5) # 5 MB per file, 5 backup files
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-
-    # Logger
+    # --- Logger ---
+    # On récupère le logger
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG) # Set the lowest level to capture all messages
-    
-    # Avoid adding handlers multiple times
-    if not logger.handlers:
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+    logger.setLevel(logging.DEBUG)  # Capture tous les messages
+
+    # Éviter les logs en double vers le logger root (souvent configuré par d'autres libs)
+    logger.propagate = False
+
+    # Éviter d'ajouter des handlers plusieurs fois si le script est ré-importé
+    if logger.hasHandlers():
+        return logger
+
+    # --- File handler (sans couleurs) ---
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=1024 * 1024 * 5, backupCount=5
+    )  # 5 MB
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.DEBUG)  # Écrit tout dans le fichier
+    logger.addHandler(file_handler)
+
+    # --- Console handler (AVEC COULEURS) ---
+    # Format personnalisé pour les logs colorés
+    console_formatter = coloredlogs.ColoredFormatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level_styles=coloredlogs.DEFAULT_LEVEL_STYLES,
+        field_styles=coloredlogs.DEFAULT_FIELD_STYLES,
+    )
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(level)  # Utilise le level (INFO, DEBUG)
+    logger.addHandler(console_handler)
 
     return logger
+
 
 # Example of how to use it:
 # from utils.logger import setup_logger
