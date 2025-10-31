@@ -1,91 +1,90 @@
 TODO COMPLET - Projet Trading Python
 📋 Phase 1 : Setup Initial (Semaine 1)
-1.1 Environnement de développement
+    1.1 Environnement de développement
 
- Créer un nouveau repository Git
- Initialiser un environnement virtuel Python (venv ou conda)
- Créer le fichier requirements.txt avec les dépendances de base :
+    Créer un nouveau repository Git
+    Initialiser un environnement virtuel Python (venv ou conda)
+    Créer le fichier requirements.txt avec les dépendances de base :
 
-  yfinance
-  backtrader
-  pandas-ta
-  optuna
-  pandas
-  numpy
-  matplotlib
-  plotly
-  pyyaml
-  python-dotenv
-  jupyter
-  pytest
+    yfinance
+    backtrader
+    pandas-ta
+    optuna
+    pandas
+    numpy
+    matplotlib
+    plotly
+    pyyaml
+    python-dotenv
+    jupyter
+    pytest
 
- Installer toutes les dépendances
- Créer la structure de dossiers du projet
- Configurer .gitignore pour Python
- Créer README.md avec description du projet
- Setup du logging de base (utils/logger.py)
+    Installer toutes les dépendances
+    Créer la structure de dossiers du projet
+    Configurer .gitignore pour Python
+    Créer README.md avec description du projet
+    Setup du logging de base (utils/logger.py)
 
-1.2 Configuration
+    1.2 Configuration
 
- Créer config/settings.yaml avec paramètres globaux :
+    Créer config/settings.yaml avec paramètres globaux :
 
-Périodes par défaut
-Commissions broker
-Capital initial
-Timezone
-
-
- Créer .env pour API keys (si nécessaire plus tard)
- Créer utils/config_loader.py pour charger les configurations
-
-📊 Phase 2 : Gestion des Données (Semaine 1-2)
-2.1 Data Manager
-
- Créer utils/data_manager.py avec classe DataManager :
-
- Méthode download_data() pour yfinance
- Méthode save_to_cache() pour sauvegarder en CSV
- Méthode load_from_cache() pour charger depuis cache
- Gestion des erreurs de téléchargement
- Validation des données (trous, valeurs aberrantes)
+    Périodes par défaut
+    Commissions broker
+    Capital initial
+    Timezone
 
 
+    Créer .env pour API keys (si nécessaire plus tard)
+    Créer utils/config_loader.py pour charger les configurations
 
-2.2 Scripts de données
+    📊 Phase 2 : Gestion des Données (Semaine 1-2)
+    2.1 Data Manager
 
- Créer scripts/download_data.py :
+    Créer utils/data_manager.py avec classe DataManager :
 
- Arguments CLI (ticker, période, intervalle)
- Mode batch pour télécharger multiple tickers
- Barre de progression pour téléchargements
-
-
- Créer liste de tickers par marché :
-
- config/markets/sp500.yaml
- config/markets/cac40.yaml
+    Méthode download_data() pour yfinance
+    Méthode save_to_cache() pour sauvegarder en CSV
+    Méthode load_from_cache() pour charger depuis cache
+    Gestion des erreurs de téléchargement
+    Validation des données (trous, valeurs aberrantes)
 
 
 
-2.3 Data preprocessing
+    2.2 Scripts de données
 
- Créer utils/data_processor.py :
+    Créer scripts/download_data.py :
 
- Ajustement pour splits/dividendes
- Calcul des returns
- Détection et gestion des outliers
- Resampling (aggrégation temporelle)
-
+    Arguments CLI (ticker, période, intervalle)
+    Mode batch pour télécharger multiple tickers
+    Barre de progression pour téléchargements
 
 
-2.4 Validation
+    Créer liste de tickers par marché :
 
- Notebook 01_data_exploration.ipynb :
+    config/markets/sp500.yaml
+    config/markets/cac40.yaml
 
- Visualisation des données téléchargées
- Statistiques descriptives
- Vérification de la qualité des données
- Test de téléchargement sur 5-10 tickers
+
+
+    2.3 Data preprocessing
+
+    Créer utils/data_processor.py :
+
+    Calcul des returns
+    Détection et gestion des outliers
+    Resampling (aggrégation temporelle)
+
+
+
+    2.4 Validation
+
+    Notebook 01_data_exploration.ipynb :
+
+    Visualisation des données téléchargées
+    Statistiques descriptives
+    Vérification de la qualité des données
+    Test de téléchargement sur 5-10 tickers
 
 
 

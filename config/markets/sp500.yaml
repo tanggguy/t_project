@@ -1,0 +1,14 @@
+# config/markets/sp500.yaml
+# Échantillon des tickers du S&P 500 pour les tests
+
+tickers:
+  - "AAPL"  # Apple
+  - "MSFT"  # Microsoft
+  - "GOOGL" # Google
+  - "AMZN"  # Amazon
+  - "NVDA"  # NVIDIA
+  - "TSLA"  # Tesla
+  - "META"  # Meta Platforms
+  - "BRK-B" # Berkshire Hathaway
+  - "JPM"   # JPMorgan Chase
+  - "JNJ"   # Johnson & Johnson

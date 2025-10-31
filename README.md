@@ -49,6 +49,7 @@ t_project/
 │   ├── data_manager.py          # Gestion données yfinance , gere les indicators
 │   ├── logger.py                # Logging personnalisé
 │   ├── config_loader.py         # Chargement configurations
+│   ├── data_processor.py        # Calcul des returns  Détection et gestion des outliers  Resampling 
 │   └── market_calendar.py       # Jours de trading
 │
 ├── visualization/

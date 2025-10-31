@@ -1,0 +1,15 @@
+# config/markets/cac40.yaml
+# Échantillon des tickers du CAC 40 (Euronext Paris)
+# Le suffixe .PA est requis par yfinance
+
+tickers:
+  - "MC.PA"   # LVMH
+  - "TTE.PA"  # TotalEnergies
+  - "SAN.PA"  # Sanofi
+  - "OR.PA"   # L'Oréal
+  - "KER.PA"  # Kering
+  - "BNP.PA"  # BNP Paribas
+  - "CS.PA"   # AXA
+  - "SU.PA"   # Schneider Electric
+  - "AI.PA"   # Air Liquide
+  - "AIR.PA"  # Airbus
