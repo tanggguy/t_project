@@ -87,6 +87,17 @@ class DataManager:
         try:
             df = pd.read_csv(filepath, index_col="Date", parse_dates=True)
 
+            # --- CORRECTION ---
+            # Si le fichier cache est vide ou invalide, df.index
+            # ne sera pas un DatetimeIndex et n'aura pas '.tz'.
+            if df.empty or not isinstance(df.index, pd.DatetimeIndex):
+                logger.warning(
+                    f"Fichier cache {filepath} est vide ou invalide. "
+                    "Re-téléchargement."
+                )
+                return None
+            # --- FIN CORRECTION ---
+
             # Assurer la conversion correcte de la timezone depuis le cache
             if not df.index.tz:
                 df.index = df.index.tz_localize("UTC")  # Sauvegardé en UTC par défaut
