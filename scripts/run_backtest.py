@@ -3,6 +3,9 @@ import sys
 from pathlib import Path
 import logging
 
+# --- 2. Bibliothèques tierces ---
+import pandas as pd
+
 # --- Configuration du Chemin (Important pour les scripts) ---
 # Ajoute la racine du projet au PYTHONPATH pour que les imports (utils, etc.) fonctionnent
 try:
@@ -27,27 +30,23 @@ from utils.config_loader import get_settings  # Pour lire le capital initial
 logger = setup_logger(__name__, log_file="logs/backtest/run_backtest.log")
 
 
-def print_results(results: list, initial_capital: float) -> None:
+def print_results(results: list, initial_capital: float, data_df: pd.DataFrame) -> None:
     """
     Affiche les résultats de base du backtest.
+
+    Args:
+        results: Liste des stratégies exécutées par Cerebro
+        initial_capital: Capital de départ
+        data_df: DataFrame des données pour récupérer la période réelle
     """
 
-    # --- CORRECTION ---
-    # Le traceback montre que le simple fait de vérifier la "truthiness"
-    # de results[0] (if not results[0]) déclenche une erreur interne
-    # de backtrader (AttributeError: 'NoneType' object has no attribute 'addindicator').
-    # Si results est une liste vide, nous le capterons.
-    # Si engine.run() a réussi, nous supposons que results[0] est un
-    # objet stratégie valide.
     if not results:
         logger.error(
             "Aucun résultat de stratégie à analyser (liste de résultats vide)."
         )
         return
 
-    # Nous accédons directement à l'objet sans le tester.
     strat = results[0]
-    # --- FIN CORRECTION ---
 
     # --- Analyseurs ---
     try:
@@ -66,14 +65,20 @@ def print_results(results: list, initial_capital: float) -> None:
     pnl_pct = (pnl / initial_capital) * 100
     total_trades = trades_analyzer.get("total", {}).get("total", 0)
     sharpe_ratio = sharpe_analyzer.get("sharperatio", None)
-    max_drawdown = drawdown_analyzer.get("max", {}).get("drawdown", 0) * 100  # en %
 
-    # --- Affichage (style 'print' pour un script CLI, 'logger.info' pour les logs) ---
+    # ✅ CORRECTION: Le drawdown est déjà en pourcentage dans Backtrader
+    max_drawdown = drawdown_analyzer.get("max", {}).get("drawdown", 0)
+
+    # ✅ CORRECTION: Récupérer les vraies dates depuis le DataFrame
+    start_date = data_df.index.min().date().isoformat()
+    end_date = data_df.index.max().date().isoformat()
+
+    # --- Affichage ---
     report = f"""
     ==================================================
     🏁 RÉSULTATS DU BACKTEST - {strat.strategy_name}
     ==================================================
-    Période analysée: {strat.data.datetime.date(0).isoformat()} à {strat.data.datetime.date(-1).isoformat()}
+    Période analysée: {start_date} à {end_date}
     
     📈 Performance:
     --------------------------------------------------
@@ -103,7 +108,7 @@ def main() -> None:
     # --- Paramètres du Test (Tâche 3.4) ---
     TICKER: str = "AAPL"
     START_DATE: str = "2018-01-01"
-    END_DATE: str = "2023-12-31"  # 2 ans
+    END_DATE: str = "2023-12-31"
     STRATEGY_PARAMS: dict = {
         "fast_period": 10,
         "slow_period": 30,
@@ -139,11 +144,11 @@ def main() -> None:
         # 5. Lancer le backtest
         results = engine.run()
 
-        # 6. Afficher les résultats
+        # 6. Afficher les résultats (en passant data_df maintenant)
         initial_capital = (
             get_settings().get("backtest", {}).get("initial_capital", 10000.0)
         )
-        print_results(results, initial_capital)
+        print_results(results, initial_capital, data_df)
 
         # 7. Afficher le graphique
         logger.info("Affichage du graphique (fermez la fenêtre pour quitter)...")
