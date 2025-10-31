@@ -231,32 +231,55 @@ class DataManager:
         Ajoute les indicateurs techniques au DataFrame en utilisant pandas-ta.
         Conforme au principe "Data-Driven" du manifeste.
 
-        Args:
-            df (pd.DataFrame): Le DataFrame OHLCV.
-
-        Returns:
-            pd.DataFrame: Le DataFrame avec les colonnes d'indicateurs ajoutées.
+        NOTE : Cette version recrée la logique de 'ta.Strategy' manuellement
+        pour contourner les problèmes de versions/dépendances, tout en
+        restant modulaire.
         """
         if df.empty:
             return df
 
+        # --- DÉFINITION MODULAIRE DE LA STRATÉGIE ---
+        # (Ceci remplace 'ta.Strategy')
+        # Vous pouvez modifier/ajouter/supprimer des indicateurs ici.
+        # 'kind' est le nom de la fonction dans pandas-ta (ex: ta.rsi)
+        # Le reste des clés/valeurs sont les paramètres.
+        strategy_definition = [
+            {"kind": "rsi", "length": 14},
+            {"kind": "macd", "fast": 12, "slow": 26, "signal": 9},
+            {"kind": "bbands", "length": 20, "std": 2},
+            {"kind": "atr", "length": 14},
+        ]
+        # -----------------------------------------------
+
         logger.debug(
-            f"Ajout des indicateurs techniques (RSI, MACD, BBands, ATR) pour {len(df)} lignes."
+            f"Ajout de {len(strategy_definition)} indicateurs "
+            f"(méthode manuelle modulaire) pour {len(df)} lignes."
         )
+
         try:
-            # Stratégie d'indicateurs personnalisée (peut être externalisée)
-            custom_strategy = ta.Strategy(
-                name="t_project_base",
-                description="Indicateurs de base du projet (RSI, MACD, BBands, ATR)",
-                ta=[
-                    {"kind": "rsi", "length": 14},
-                    {"kind": "macd", "fast": 12, "slow": 26, "signal": 9},
-                    {"kind": "bbands", "length": 20, "std": 2},
-                    {"kind": "atr", "length": 14},
-                ],
-            )
-            # Appliquer la stratégie
-            df.ta.strategy(custom_strategy)
+            for indicator_params in strategy_definition:
+                # Copie pour éviter de modifier l'original
+                params = indicator_params.copy()
+
+                # Sépare le 'kind' (nom de la fonction) des 'params'
+                kind = params.pop("kind")
+
+                try:
+                    # Récupère la fonction de 'df.ta' (ex: df.ta.rsi)
+                    indicator_function = getattr(df.ta, kind)
+
+                    # Appelle la fonction avec ses paramètres
+                    # (ex: df.ta.rsi(length=14, append=True))
+                    indicator_function(**params, append=True)
+
+                except AttributeError:
+                    logger.error(f"Indicateur non trouvé dans pandas-ta: 'ta.{kind}'")
+                    raise
+                except Exception as e:
+                    logger.error(
+                        f"Erreur lors du calcul de '{kind}' avec params {params}: {e}"
+                    )
+                    raise
 
             # Nettoyer les NaNs initiaux créés par les indicateurs
             initial_rows = len(df)
@@ -269,7 +292,7 @@ class DataManager:
 
         except Exception as e:
             logger.error(f"Échec de l'ajout des indicateurs : {e}")
-            raise e  # <-- AJOUTEZ CETTE LIGNE
+            raise e  # Propage l'erreur
 
         return df
 

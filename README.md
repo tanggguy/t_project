@@ -46,7 +46,7 @@ t_project/
 │
 ├── utils/
 │   ├── __init__.py
-│   ├── data_manager.py          # Gestion données yfinance
+│   ├── data_manager.py          # Gestion données yfinance , gere les indicators
 │   ├── logger.py                # Logging personnalisé
 │   ├── config_loader.py         # Chargement configurations
 │   └── market_calendar.py       # Jours de trading
