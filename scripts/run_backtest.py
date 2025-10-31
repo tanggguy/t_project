@@ -31,12 +31,23 @@ def print_results(results: list, initial_capital: float) -> None:
     """
     Affiche les résultats de base du backtest.
     """
-    if not results or not results[0]:
-        logger.error("Aucun résultat de stratégie à analyser.")
+
+    # --- CORRECTION ---
+    # Le traceback montre que le simple fait de vérifier la "truthiness"
+    # de results[0] (if not results[0]) déclenche une erreur interne
+    # de backtrader (AttributeError: 'NoneType' object has no attribute 'addindicator').
+    # Si results est une liste vide, nous le capterons.
+    # Si engine.run() a réussi, nous supposons que results[0] est un
+    # objet stratégie valide.
+    if not results:
+        logger.error(
+            "Aucun résultat de stratégie à analyser (liste de résultats vide)."
+        )
         return
 
-    # Récupère la première (et unique) stratégie exécutée
+    # Nous accédons directement à l'objet sans le tester.
     strat = results[0]
+    # --- FIN CORRECTION ---
 
     # --- Analyseurs ---
     try:
