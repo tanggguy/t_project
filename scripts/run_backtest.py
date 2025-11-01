@@ -24,6 +24,8 @@ from utils.logger import setup_logger
 from utils.data_manager import DataManager
 from backtesting.engine import BacktestEngine
 from strategies.implementations.ma_crossover import MaCrossoverStrategy
+
+# from strategies.implementations.rsi_oversold import RsiOversoldStrategy
 from utils.config_loader import get_settings  # Pour lire le capital initial
 
 # Initialisation du logger pour ce script
@@ -113,6 +115,11 @@ def main() -> None:
         "fast_period": 10,
         "slow_period": 30,
     }
+    # STRATEGY_PARAMS: dict = {
+    #     "rsi_period": 14,
+    #     "rsi_buy_threshold": 30,
+    #     "rsi_sell_threshold": 70,
+    # }
 
     try:
         # 1. Charger les données
@@ -120,11 +127,11 @@ def main() -> None:
             f"Chargement des données pour {TICKER} de {START_DATE} à {END_DATE}"
         )
         dm = DataManager()
+
         data_df = dm.get_data(
             ticker=TICKER,
             start_date=START_DATE,
             end_date=END_DATE,
-            add_indicators=True,  # Important pour nettoyer les NaNs de chauffe
             use_cache=True,
         )
 
@@ -132,6 +139,19 @@ def main() -> None:
             logger.error(f"Aucune donnée chargée pour {TICKER}. Arrêt.")
             return
 
+        # Ajouter les indicateurs nécessaires pour la stratégie
+        logger.info("Ajout des indicateurs techniques...")
+        rsi_period = STRATEGY_PARAMS.get("rsi_period", 14)
+
+        data_df.ta.rsi(rsi_period, append=True)
+        data_df.dropna(inplace=True)  # Nettoyer les NaNs de période de chauffe
+
+        logger.info(f"Données préparées: {len(data_df)} lignes avec indicateurs")
+        # 🔍 DEBUG : Vérifier les colonnes disponibles
+        logger.info(f"Colonnes disponibles dans le DataFrame : {list(data_df.columns)}")
+        logger.info(f"Premières lignes du DataFrame :\n{data_df.head()}")
+
+        logger.info(f"Données préparées: {len(data_df)} lignes avec indicateurs")
         # 2. Initialiser le moteur de Backtest
         engine = BacktestEngine()
 
@@ -139,7 +159,9 @@ def main() -> None:
         engine.add_data(data_df, name=TICKER)
 
         # 4. Ajouter la stratégie au moteur
+
         engine.add_strategy(MaCrossoverStrategy, **STRATEGY_PARAMS)
+        # engine.add_strategy(RsiOversoldStrategy, **STRATEGY_PARAMS)
 
         # 5. Lancer le backtest
         results = engine.run()

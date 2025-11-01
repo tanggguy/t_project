@@ -88,50 +88,50 @@ TODO COMPLET - Projet Trading Python
 
 
 
-🎯 Phase 3 : Première Stratégie Simple (Semaine 2-3)
-3.1 Base Strategy
+    🎯 Phase 3 : Première Stratégie Simple (Semaine 2-3)
+    3.1 Base Strategy
 
- Créer strategies/base_strategy.py :
+    Créer strategies/base_strategy.py :
 
- Classe abstraite héritant de bt.Strategy
- Méthodes template : __init__, next, notify_order
- Logging intégré
- Gestion basique des ordres
-
-
-
-3.2 Stratégie Moving Average Crossover
-
- Créer strategies/implementations/ma_crossover.py :
-
- Paramètres : fast_period, slow_period
- Logique : achat sur golden cross, vente sur death cross
- Position sizing simple (100% du capital)
- Pas de stop-loss pour commencer
+    Classe abstraite héritant de bt.Strategy
+    Méthodes template : __init__, next, notify_order
+    Logging intégré
+    Gestion basique des ordres
 
 
 
-3.3 Premier Backtest
+    3.2 Stratégie Moving Average Crossover
 
- Créer backtesting/engine.py :
+    Créer strategies/implementations/ma_crossover.py :
 
- Classe BacktestEngine
- Configuration Cerebro (capital, commission)
- Ajout des analyseurs basiques (returns, sharpe)
- Méthode run() qui retourne les résultats
-
-
-
-3.4 Script de test
-
- Créer scripts/run_backtest.py :
-
- Charger données d'un ticker (ex: AAPL)
- Lancer backtest sur 2 ans
- Afficher résultats basiques (P&L, nombre trades)
+    Paramètres : fast_period, slow_period
+    Logique : achat sur golden cross, vente sur death cross
+    Position sizing simple (100% du capital)
+    Pas de stop-loss pour commencer
 
 
- Vérifier que tout fonctionne bout en bout
+
+    3.3 Premier Backtest
+
+    Créer backtesting/engine.py :
+
+    Classe BacktestEngine
+    Configuration Cerebro (capital, commission)
+    Ajout des analyseurs basiques (returns, sharpe)
+    Méthode run() qui retourne les résultats
+
+
+
+    3.4 Script de test
+
+    Créer scripts/run_backtest.py :
+
+    Charger données d'un ticker (ex: AAPL)
+    Lancer backtest sur 2 ans
+    Afficher résultats basiques (P&L, nombre trades)
+
+
+    Vérifier que tout fonctionne bout en bout
 
 📈 Phase 4 : Indicateurs Techniques (Semaine 3-4)
 4.1 Intégration pandas-ta

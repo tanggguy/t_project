@@ -13,6 +13,7 @@ import pytz
 from utils.logger import setup_logger
 from utils.config_loader import get_settings
 
+
 # Initialisation du logger pour ce module
 logger = setup_logger(__name__)
 
@@ -264,39 +265,6 @@ class DataManager:
             logger.error(f"Erreur lors du téléchargement de {ticker}: {e}")
             return pd.DataFrame()
 
-    def add_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Ajoute des indicateurs techniques au DataFrame en utilisant pandas-ta.
-
-        Args:
-            df (pd.DataFrame): DataFrame OHLCV.
-
-        Returns:
-            pd.DataFrame: DataFrame avec les indicateurs ajoutés.
-        """
-        if df.empty:
-            logger.warning("DataFrame vide. Impossible d'ajouter des indicateurs.")
-            return df
-
-        logger.debug("Ajout des indicateurs techniques avec pandas-ta...")
-
-        try:
-            # Calcul avec pandas-ta
-            df.ta.rsi(length=14, append=True)
-            df.ta.macd(fast=12, slow=26, signal=9, append=True)
-            df.ta.bbands(length=20, std=2, append=True)
-            df.ta.atr(length=14, append=True)
-
-            # Supprimer les NaN générés par les périodes de chauffe
-            df.dropna(inplace=True)
-
-            logger.debug(f"Indicateurs ajoutés. Nouvelles colonnes: {list(df.columns)}")
-            return df
-
-        except Exception as e:
-            logger.error(f"Erreur lors de l'ajout des indicateurs: {e}")
-            return df
-
     def get_data(
         self,
         ticker: str,
@@ -304,7 +272,6 @@ class DataManager:
         end_date: Optional[str] = None,
         interval: Optional[str] = None,
         use_cache: bool = True,
-        add_indicators: bool = False,
     ) -> pd.DataFrame:
         """
         Méthode principale pour obtenir les données.
@@ -314,7 +281,6 @@ class DataManager:
         2. Si le cache est manquant ou insuffisant, télécharge la plage
            par défaut complète et la sauvegarde.
         3. Filtre le DataFrame (du cache ou neuf) à la plage demandée.
-        4. Ajoute les indicateurs sur le DataFrame filtré.
 
         Args:
             ticker (str): Le symbole du ticker (ex: "AAPL").
@@ -322,7 +288,6 @@ class DataManager:
             end_date (Optional[str]): Date de fin (YYYY-MM-DD).
             interval (Optional[str]): Intervalle ('1d', '1h').
             use_cache (bool): Tenter d'utiliser le cache.
-            add_indicators (bool): Ajouter les indicateurs (RSI, MACD, etc.).
 
         Returns:
             pd.DataFrame: DataFrame final, prêt pour le backtesting.
@@ -382,10 +347,6 @@ class DataManager:
             )
             return df_filtered
 
-        # 6. Ajouter les indicateurs
-        if add_indicators:
-            df_filtered = self.add_indicators(df_filtered)
-
         logger.info(
             f"[OK] Données prêtes pour {ticker} ({len(df_filtered)} lignes de {start_date_eff} à {end_date_eff})."
         )
@@ -406,7 +367,6 @@ if __name__ == "__main__":
         start_date="2023-01-01",
         end_date="2023-12-31",
         use_cache=True,
-        add_indicators=True,
     )
 
     if not df_aapl.empty:
@@ -422,7 +382,6 @@ if __name__ == "__main__":
         start_date="2023-06-01",
         end_date="2023-06-30",
         use_cache=True,
-        add_indicators=False,
     )
 
     if not df_aapl_cache.empty:
