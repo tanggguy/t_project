@@ -70,26 +70,31 @@ def handle_outliers(
             )
             df = add_returns(df)
 
-        lower_bound = df["pct_return"].quantile(quantile)
-        upper_bound = df["pct_return"].quantile(1 - quantile)
+        # Exclude the first row from outlier detection as its return is always 0 and not a market value.
+        if df.shape[0] > 1:
+            returns_to_check = df["pct_return"].iloc[1:]
 
-        initial_clipped_count = (
-            (df["pct_return"] < lower_bound) | (df["pct_return"] > upper_bound)
-        ).sum()
+            lower_bound = returns_to_check.quantile(quantile)
+            upper_bound = returns_to_check.quantile(1 - quantile)
 
-        if initial_clipped_count > 0:
-            # Note : Ceci modifie 'pct_return', mais pas 'close'.
-            # C'est généralement ce qu'on veut pour l'analyse,
-            # car le prix 'close' est (généralement) la vérité du marché.
-            df["pct_return"] = df["pct_return"].clip(
-                lower=lower_bound, upper=upper_bound
-            )
-            logger.info(
-                f"{initial_clipped_count} rendements extrêmes ont été "
-                f"écrêtés aux quantiles {quantile*100}% et {(1-quantile)*100}%."
-            )
+            clipped_mask = (returns_to_check < lower_bound) | (returns_to_check > upper_bound)
+            initial_clipped_count = clipped_mask.sum()
+
+            if initial_clipped_count > 0:
+                # Note : Ceci modifie 'pct_return', mais pas 'close'.
+                # C'est généralement ce qu'on veut pour l'analyse,
+                # car le prix 'close' est (généralement) la vérité du marché.
+                df.loc[df.index[1:], "pct_return"] = returns_to_check.clip(
+                    lower=lower_bound, upper=upper_bound
+                )
+                logger.info(
+                    f"{initial_clipped_count} rendements extrêmes ont été "
+                    f"écrêtés aux quantiles {quantile*100}% et {(1-quantile)*100}%."
+                )
+            else:
+                logger.debug("Aucun outlier de rendement détecté (basé sur les quantiles).")
         else:
-            logger.debug("Aucun outlier de rendement détecté (basé sur les quantiles).")
+            logger.debug("DataFrame trop petit pour la détection d'outliers de rendement.")
 
     else:
         logger.warning(f"Méthode d'outlier '{method}' non reconnue. Aucune action.")

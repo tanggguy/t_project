@@ -127,3 +127,17 @@ Backtest via scripts/run_backtest.py
 Optimisation avec Optuna
 Analyse des résultats
 Rapport automatique
+
+
+
+
+visualization/
+├── __init__.py
+├── strategy_lab.py          # 🎯 Hub principal (API haut niveau)
+├── charts.py                # 📊 Graphiques Plotly
+├── indicator_tester.py      # 🔬 Tests d'indicateurs visuels
+└── comparator.py            # ⚖️ Comparaison multi-stratégies
+
+reports/
+├── __init__.py
+└── markdown_exporter.py     # 📝 Export automatique Markdown

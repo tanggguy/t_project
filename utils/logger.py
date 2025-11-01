@@ -1,64 +1,106 @@
+# utils/logger.py
+
 # --- 1. Bibliothèques natives ---
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+from typing import Optional
 
 # --- 2. Bibliothèques tierces ---
-import coloredlogs  # <--- NOUVEL IMPORT
+import coloredlogs
 
 # --- 3. Imports locaux du projet ---
-# (Aucun dans ce fichier)
+# Import tardif pour éviter dépendance circulaire
 
 
-def setup_logger(name, log_file="logs/trading_project.log", level=logging.INFO):
-    """Function to setup as many loggers as you want"""
+def setup_logger(
+    name: str,
+    log_file: Optional[str] = None,
+    level: Optional[int] = None,
+    use_config: bool = True,
+) -> logging.Logger:
+    """
+    Configure un logger avec rotation de fichiers et sortie console colorée.
+
+    Args:
+        name (str): Nom du logger (généralement __name__)
+        log_file (Optional[str]): Chemin du fichier de log (si None, utilise config)
+        level (Optional[int]): Niveau de log console (si None, utilise config)
+        use_config (bool): Si True, utilise settings.yaml (défaut: True)
+
+    Returns:
+        logging.Logger: Logger configuré
+
+    Example:
+        >>> from utils.logger import setup_logger
+        >>> logger = setup_logger(__name__)  # Utilise settings.yaml
+    """
+    # Import tardif pour éviter dépendance circulaire
+    if use_config:
+        try:
+            from utils.config_loader import get_config_value, get_log_level
+
+            if log_file is None:
+                log_file = get_config_value("logging.file", "logs/trading_project.log")
+
+            if level is None:
+                level = get_log_level("logging")
+
+            max_bytes = get_config_value("logging.max_bytes", 5242880)
+            backup_count = get_config_value("logging.backup_count", 5)
+        except Exception:
+            # Fallback si config non disponible
+            log_file = log_file or "logs/trading_project.log"
+            level = level or logging.INFO
+            max_bytes = 5242880
+            backup_count = 5
+    else:
+        # Valeurs par défaut si use_config=False
+        log_file = log_file or "logs/trading_project.log"
+        level = level or logging.INFO
+        max_bytes = 5242880
+        backup_count = 5
 
     # Create logs directory if it doesn't exist
     log_dir = os.path.dirname(log_file)
-    if not os.path.exists(log_dir):
+    if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    # --- Logger ---
-    # On récupère le logger
+    # Logger
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # Capture tous les messages
-
-    # Éviter les logs en double vers le logger root (souvent configuré par d'autres libs)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
-    # Éviter d'ajouter des handlers plusieurs fois si le script est ré-importé
+    # Éviter d'ajouter des handlers plusieurs fois
     if logger.hasHandlers():
         return logger
 
-    # --- File handler (sans couleurs) ---
+    # File handler (sans couleurs) - TOUJOURS DEBUG
     file_formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     file_handler = RotatingFileHandler(
-        log_file, maxBytes=1024 * 1024 * 5, backupCount=5
-    )  # 5 MB
+        log_file, maxBytes=max_bytes, backupCount=backup_count
+    )
     file_handler.setFormatter(file_formatter)
-    file_handler.setLevel(logging.DEBUG)  # Écrit tout dans le fichier
+    file_handler.setLevel(logging.DEBUG)
     logger.addHandler(file_handler)
 
-    # --- Console handler (AVEC COULEURS) ---
-    # Format personnalisé pour les logs colorés
+    # Console handler (AVEC COULEURS)
     console_formatter = coloredlogs.ColoredFormatter(
         fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level_styles=coloredlogs.DEFAULT_LEVEL_STYLES,
         field_styles=coloredlogs.DEFAULT_FIELD_STYLES,
     )
-
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(console_formatter)
-    console_handler.setLevel(level)  # Utilise le level (INFO, DEBUG)
+    console_handler.setLevel(level)
     logger.addHandler(console_handler)
 
     return logger
 
 
-# Example of how to use it:
-# from utils.logger import setup_logger
-# logger = setup_logger(__name__)
-# logger.info("This is an info message")
-# logger.debug("This is a debug message")
+# Silencer les logs verbeux de bibliothèques tierces
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("yfinance").setLevel(logging.WARNING)
