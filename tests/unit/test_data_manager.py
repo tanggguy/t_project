@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 # Importe le module à tester.
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 from utils.data_manager import DataManager
 
 # --- Fixtures de Test ---
