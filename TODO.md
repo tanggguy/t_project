@@ -136,10 +136,7 @@ TODO COMPLET - Projet Trading Python
 📈 Phase 4 : Stategie (Semaine 3-4)
 
 
-
-
-
-4.3 Stratégies avec indicateurs
+Stratégies avec indicateurs
 
  Créer strategies/implementations/rsi_oversold.py :
 
