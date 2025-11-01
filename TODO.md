@@ -125,6 +125,12 @@ TODO COMPLET - Projet Trading Python
     3.4 Script de test
 
     Créer scripts/run_backtest.py :
+    Scanne automatiquement strategies/implementations/
+    Détecte toutes les classes héritant de BaseStrategy
+    Affiche les paramètres par défaut de chaque stratégie
+    3️⃣ Paramètres par Défaut Automatiques
+    python scripts/run_backtest.py --config config/backtest_config.yaml
+
 
     Charger données d'un ticker (ex: AAPL)
     Lancer backtest sur 2 ans
@@ -133,19 +139,19 @@ TODO COMPLET - Projet Trading Python
 
     Vérifier que tout fonctionne bout en bout
 
-📈 Phase 4 : Stategie (Semaine 3-4)
+    📈 Phase 4 : Stategie (Semaine 3-4)
 
 
-Stratégies avec indicateurs
+    Stratégies avec indicateurs
 
- Créer strategies/implementations/rsi_oversold.py :
+    Créer strategies/implementations/rsi_oversold.py :
 
- Achat sur RSI < 30, vente sur RSI > 70
+    Achat sur RSI < 30, vente sur RSI > 70
 
 
- Créer strategies/implementations/macd_momentum.py :
+    Créer strategies/implementations/macd_momentum.py :
 
- Trading sur croisements MACD
+    Trading sur croisements MACD
 
 
  Notebook 02_strategy_development.ipynb :

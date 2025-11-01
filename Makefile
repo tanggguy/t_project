@@ -13,3 +13,15 @@ Exemple 3 : Télécharger tout le marché "sp500" (mode batch) (Note : Cela éch
 Bash
 
 python scripts/download_data.py --market sp500
+
+
+
+# Lister les stratégies disponibles
+python scripts/run_backtest.py --list-strategies
+
+# Lancer un backtest
+python scripts/run_backtest.py --config config/backtest_config.yaml
+
+# Avec le script helper
+./run_backtest.sh config/backtest_config.yaml
+./run_backtest.sh --list

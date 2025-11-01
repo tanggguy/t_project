@@ -28,9 +28,6 @@ from utils.logger import setup_logger
 from utils.data_manager import DataManager
 from backtesting.engine import BacktestEngine
 from strategies.base_strategy import BaseStrategy
-from strategies.implementations.ma_crossover import MaCrossoverStrategy
-from strategies.implementations.rsi_oversold import RsiOversoldStrategy
-from strategies.implementations.macd_momentum import MacdMomentumStrategy
 
 # Initialisation du logger
 logger = setup_logger(__name__, log_file="logs/backtest/run_backtest.log")
@@ -118,10 +115,17 @@ def get_strategy_defaults(strategy_class: Type[BaseStrategy]) -> Dict[str, Any]:
     defaults = {}
 
     if hasattr(strategy_class, "params"):
-        for param in strategy_class.params:
-            if isinstance(param, tuple) and len(param) == 2:
-                param_name, default_value = param
-                defaults[param_name] = default_value
+        # Backtrader stocke les params dans un objet spécial
+        # La méthode la plus simple est d'itérer sur les attributs publics
+        for param_name in dir(strategy_class.params):
+            # Ignorer les attributs privés/magiques et les méthodes
+            if not param_name.startswith("_") and not callable(
+                getattr(strategy_class.params, param_name)
+            ):
+                try:
+                    defaults[param_name] = getattr(strategy_class.params, param_name)
+                except (TypeError, AttributeError):
+                    pass
 
     return defaults
 
