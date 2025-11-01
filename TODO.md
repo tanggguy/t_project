@@ -171,7 +171,7 @@ TODO COMPLET - Projet Trading Python
  ATR-based stop loss
  Support/Resistance stops
 
-
+Créer risk_management/take_profit.py
 
 5.2 Position Sizing
 
