@@ -123,12 +123,6 @@ def parse_arguments() -> argparse.Namespace:
         dest="use_cache",
         help="Force le re-téléchargement et écrase le cache existant.",
     )
-    parser.add_argument(
-        "--no-indicators",
-        action="store_false",
-        dest="add_indicators",
-        help="Ne pas calculer et ajouter les indicateurs techniques.",
-    )
 
     return parser.parse_args()
 
@@ -174,7 +168,6 @@ def main():
         logger.info(
             f"Paramètres: Start={args.start or 'défaut'}, End={args.end or 'défaut'}, "
             f"Interval={args.interval or 'défaut'}, Cache={args.use_cache}, "
-            f"Indicateurs={args.add_indicators}"
         )
 
         successful_downloads = 0
@@ -191,7 +184,6 @@ def main():
                     end_date=args.end,
                     interval=args.interval,
                     use_cache=args.use_cache,
-                    add_indicators=args.add_indicators,
                 )
 
                 if df.empty:

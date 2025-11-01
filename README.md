@@ -9,10 +9,6 @@ t_project/
 ├── strategies/
 │   ├── __init__.py
 │   ├── base_strategy.py          # Classe de base pour toutes stratégies
-│   ├── indicators/
-│   │   ├── __init__.py
-│   │   ├── custom_indicators.py  # Vos indicateurs personnalisés
-│   │   └── combinations.py       # Combinaisons d'indicateurs
 │   └── implementations/
 │       ├── __init__.py
 │       ├── ma_crossover.py       # Exemple: Moving Average Crossover
@@ -46,7 +42,7 @@ t_project/
 │
 ├── utils/
 │   ├── __init__.py
-│   ├── data_manager.py          # Gestion données yfinance , gere les indicators
+│   ├── data_manager.py          # Gestion données yfinance 
 │   ├── logger.py                # Logging personnalisé
 │   ├── config_loader.py         # Chargement configurations
 │   ├── data_processor.py        # Calcul des returns  Détection et gestion des outliers  Resampling 

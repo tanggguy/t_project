@@ -133,25 +133,9 @@ TODO COMPLET - Projet Trading Python
 
     Vérifier que tout fonctionne bout en bout
 
-📈 Phase 4 : Indicateurs Techniques (Semaine 3-4)
-4.1 Intégration pandas-ta
-
- Créer strategies/indicators/technical.py :
-
- Wrapper pour indicateurs pandas-ta
- RSI, MACD, Bollinger Bands
- Volume indicators (OBV, VWAP)
- ATR pour volatilité
+📈 Phase 4 : Stategie (Semaine 3-4)
 
 
-
-4.2 Indicateurs custom
-
- Créer strategies/indicators/custom_indicators.py :
-
- Indicateurs propriétaires si besoin
- Combinaisons d'indicateurs
- Signaux de confirmation
 
 
 

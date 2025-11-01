@@ -23,7 +23,7 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 3.  **Modularité :** Séparer les responsabilités.
     * La gestion des données (`utils/data_manager.py`) est séparée de la logique de stratégie (`strategies/`).
     * Le script de backtest (`scripts/run_backtest.py`) est séparé de la logique d'optimisation (`optimization/`).
-4.  **"Data-Driven" :** La logique de `backtrader` doit rester simple. L'essentiel du calcul d'indicateurs se fait en amont avec `pandas-ta` et est injecté dans le DataFrame *avant* le backtest.
+4.  **"Data-Driven" :** La logique de `backtrader` doit rester simple. 
 5. Pose des questions si necessaire.
 
 ---
@@ -69,15 +69,25 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 
 ## 4. Conventions Spécifiques aux Librairies
 
-### 4.1. `pandas` et `pandas-ta`
-* Les indicateurs doivent être calculés dans le `DataManager` ou un script de préparation.
-* Les colonnes générées par `pandas-ta` doivent être accessibles et nommées de façon prévisible (ex: `RSI_14`, `MACDh_12_26_9`).
-* Le DataFrame passé à Backtrader doit être "prêt à l'emploi".
+### 4.1. `pandas` et Données
+* Le DataManager ne gère QUE les données OHLCV brutes.
+* Les indicateurs sont calculés directement dans Backtrader (approche native).
+* Le DataFrame passé à Backtrader doit contenir uniquement: open, high, low, close, volume.
 
 ### 4.2. `backtrader`
 * **Alias standard :** Toujours importer `import backtrader as bt`.
 * **Noms de Stratégie :** Toujours finir par `Strategy` (ex: `SmaCrossStrategy`, `RsiStrategy`).
 * **Paramètres :** Toujours définir les paramètres via le tuple `params = (('fast_ma', 10), ('slow_ma', 30))`.
+**indicateurs :**
+* Tous les indicateurs sont définis dans `__init__` de la stratégie.
+* Utiliser `bt.indicators` pour indicateurs standards (SMA, RSI, MACD, etc.).
+* Pour indicateurs custom, créer des classes héritant de `bt.Indicator`.
+* Exemples :
+```python
+    self.sma_fast = bt.indicators.SMA(self.data.close, period=self.p.fast_period)
+    self.sma_slow = bt.indicators.SMA(self.data.close, period=self.p.slow_period)
+    self.rsi = bt.indicators.RSI(self.data.close, period=14)
+```
 * **Accès aux données :**
     * `self.data0` ou `self.data` est la donnée principale.
     * `self.data.close[0]` est le prix de clôture *actuel*.
