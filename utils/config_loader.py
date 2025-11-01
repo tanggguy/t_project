@@ -142,7 +142,7 @@ def get_config_value(key_path: str, default: Any = None) -> Any:
 
 
 # --- Bloc de test ---
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     """
     Test du module config_loader.
     """

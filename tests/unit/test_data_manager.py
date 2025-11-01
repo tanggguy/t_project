@@ -1,748 +1,750 @@
 # test_data_manager.py
-# -*- coding: utf-8 -*-
-
-"""
-Suite de tests unitaires pour la classe DataManager.
-"""
-import sys
-import pytest
-from unittest.mock import MagicMock, patch, call
-import pandas as pd
-from pandas.testing import assert_frame_equal
-import pytz
+# --- 1. Bibliothèques natives ---
+import logging
 from pathlib import Path
-import numpy as np
+from typing import Dict, Any
+from datetime import timezone  # Importer timezone standard
 
-# Importe le module à tester.
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+# --- 2. Bibliothèques tierces ---
+import pandas as pd
+import pytest
+from pytest_mock import MockerFixture
+import pytz
+from freezegun import freeze_time
+
+# --- 3. Imports locaux du projet ---
 from utils.data_manager import DataManager
 
-# --- Fixtures de Test ---
+# Configuration de base pour les tests
+TEST_CACHE_DIR = "data/test_cache/"
+DEFAULT_SETTINGS: Dict[str, Any] = {
+    "project": {"timezone": "Europe/Paris"},
+    "data": {
+        "cache_dir": TEST_CACHE_DIR,
+        "default_start_date": "2015-01-01",
+        "default_end_date": "2024-12-31",
+        "default_interval": "1d",
+    },
+}
+PARIS_TZ = pytz.timezone("Europe/Paris")
+UTC_TZ = pytz.timezone("UTC")
+
+
+@pytest.fixture(autouse=True)
+def mock_project_root(mocker: MockerFixture) -> Path:
+    """Mock le PROJECT_ROOT pour pointer vers un 'faux' répertoire."""
+    mock_path = mocker.MagicMock(spec=Path)
+    mock_path_instance = mocker.MagicMock(spec=Path)
+
+    mock_path.return_value.resolve.return_value.parent.parent = mock_path_instance
+    mock_path_instance.__truediv__.side_effect = lambda other: Path(
+        f"/fake/project/{other}"
+    )
+
+    mocker.patch("utils.data_manager.PROJECT_ROOT", mock_path_instance)
+    mocker.patch("utils.data_manager.Path", mock_path)
+
+    return mock_path_instance
 
 
 @pytest.fixture
-def mock_dependencies(mocker, tmp_path):
-    """
-    Fixture centralisée pour mocker toutes les dépendances externes
-    (config, logger, I/O fichier, réseau).
-    """
+def mock_dependencies(mocker: MockerFixture) -> Dict[str, MockerFixture]:
+    """Mock toutes les dépendances externes (logger, settings, mkdir)."""
 
-    # 1. Mock la configuration (get_settings)
-    mock_settings = {
-        "data": {
-            "cache_dir": "test_cache/",
-            "default_start_date": "2015-01-01",
-            "default_end_date": "2024-12-31",
-            "default_interval": "1d",
-        },
-        "project": {"timezone": "Europe/Paris"},
-    }
-    mocker.patch("data_manager.get_settings", return_value=mock_settings)
+    # Patcher la variable 'logger' NIVEAU MODULE
+    mock_log_instance = mocker.patch("utils.data_manager.logger", spec=logging.Logger)
 
-    # 2. Mock le logger
-    mock_logger = MagicMock()
-    mocker.patch("data_manager.setup_logger", return_value=mock_logger)
+    # Mock get_settings
+    mock_get_settings = mocker.patch("utils.data_manager.get_settings")
+    mock_get_settings.return_value = DEFAULT_SETTINGS
 
-    # 3. Mock PROJECT_ROOT pour utiliser tmp_path
-    # C'est crucial pour isoler les tests du système de fichiers réel.
-    mocker.patch("data_manager.PROJECT_ROOT", tmp_path)
+    # Mock pytz
+    mock_pytz = mocker.patch("utils.data_manager.pytz")
+    mock_pytz.timezone.side_effect = pytz.timezone
 
-    # 4. Mock pytz.timezone (appelé dans __init__)
-    mock_tz = pytz.timezone("Europe/Paris")
-    mocker.patch("data_manager.pytz.timezone", return_value=mock_tz)
+    # Mock Path.mkdir
+    mock_mkdir = mocker.patch("pathlib.Path.mkdir")
 
-    # 5. Mock les méthodes de Path (appelées dans __init__ et autres)
-    mock_mkdir = mocker.patch("data_manager.Path.mkdir")
-    mock_exists = mocker.patch("data_manager.Path.exists")
-    mock_stat = mocker.patch("data_manager.Path.stat")
-
-    # 6. Mock les appels réseau (yfinance)
-    mock_yf_ticker_cls = mocker.patch("data_manager.yf.Ticker")
-    mock_yf_ticker_instance = MagicMock()
+    # Mock yfinance
+    mock_yf_ticker_cls = mocker.patch("utils.data_manager.yf.Ticker")
+    mock_yf_ticker_instance = mocker.MagicMock()
     mock_yf_ticker_cls.return_value = mock_yf_ticker_instance
 
-    # 7. Mock les I/O de pandas
-    mock_read_csv = mocker.patch("data_manager.pd.read_csv")
-    mock_to_csv = mocker.patch("pandas.DataFrame.to_csv")  # Patch sur la classe DF
-
-    # Retourne les mocks pour que les tests puissent les configurer
     return {
-        "mock_logger": mock_logger,
-        "mock_settings": mock_settings,
-        "mock_tz": mock_tz,
-        "mock_mkdir": mock_mkdir,
-        "mock_exists": mock_exists,
-        "mock_stat": mock_stat,
-        "mock_yf_ticker_cls": mock_yf_ticker_cls,
-        "mock_yf_ticker_instance": mock_yf_ticker_instance,
-        "mock_read_csv": mock_read_csv,
-        "mock_to_csv": mock_to_csv,
-        "tmp_path": tmp_path,
+        "logger": mock_log_instance,
+        "get_settings": mock_get_settings,
+        "pytz": mock_pytz,
+        "mkdir": mock_mkdir,
+        "yf_ticker": mock_yf_ticker_instance,
     }
 
 
 @pytest.fixture
-def manager(mock_dependencies):
-    """
-    Retourne une instance de DataManager avec toutes les dépendances mockées.
-    """
-    # L'instanciation déclenche __init__, qui utilise les mocks
-    # de mock_dependencies (get_settings, setup_logger, PROJECT_ROOT, pytz, mkdir)
+def sample_dataframe() -> pd.DataFrame:
+    """Fournit un DataFrame valide pour les tests."""
+    dates = pd.date_range(start="2020-01-01", end="2020-01-31", freq="D", tz=PARIS_TZ)
+    data = {
+        # Utiliser des floats pour les prix
+        "open": [100.0 + i for i in range(len(dates))],
+        "high": [105.0 + i for i in range(len(dates))],
+        "low": [99.0 + i for i in range(len(dates))],
+        "close": [102.0 + i for i in range(len(dates))],
+        "volume": [1000 * i for i in range(len(dates))],
+    }
+    df = pd.DataFrame(data, index=dates)
+    df.index.name = "Date"
+    return df
+
+
+@pytest.fixture
+def data_manager(mock_dependencies: Dict[str, MockerFixture]) -> DataManager:
+    """Fixture pour un DataManager initialisé avec des mocks."""
     return DataManager()
 
 
-@pytest.fixture
-def sample_df_paris():
-    """Un DataFrame échantillon avec la timezone de Paris."""
-    tz = pytz.timezone("Europe/Paris")
-    dates = pd.date_range(start="2023-01-01", end="2023-01-05", freq="1D", tz=tz)
-    data = {
-        "open": [100, 101, 102, 103, 104],
-        "high": [105, 106, 107, 108, 109],
-        "low": [99, 100, 101, 102, 103],
-        "close": [101, 102, 103, 104, 105],
-        "volume": [1000, 1100, 1200, 1300, 1400],
-    }
-    df = pd.DataFrame(data, index=dates)
-    df.index.name = "Date"
-    return df
-
-
-@pytest.fixture
-def sample_df_utc():
-    """Un DataFrame échantillon avec la timezone UTC."""
-    tz = pytz.timezone("UTC")
-    dates = pd.date_range(start="2023-01-01", end="2023-01-05", freq="1D", tz=tz)
-    data = {
-        "open": [100, 101, 102, 103, 104],
-        "high": [105, 106, 107, 108, 109],
-        "low": [99, 100, 101, 102, 103],
-        "close": [101, 102, 103, 104, 105],
-        "volume": [1000, 1100, 1200, 1300, 1400],
-    }
-    df = pd.DataFrame(data, index=dates)
-    df.index.name = "Date"
-    return df
-
-
-@pytest.fixture
-def sample_df_raw_yfinance():
-    """Un DataFrame échantillon brut tel que retourné par yfinance (caps, no tz)."""
-    dates = pd.date_range(start="2023-01-01", end="2023-01-05", freq="1D")  # Pas de TZ
-    data = {
-        "Open": [100, 101, 102, 103, 104],
-        "High": [105, 106, 107, 108, 109],
-        "Low": [99, 100, 101, 102, 103],
-        "Close": [101, 102, 103, 104, 105],
-        "Volume": [1000, 1100, 1200, 1300, 1400],
-        "Dividends": [0, 0, 0, 0, 0],  # yfinance peut retourner ceci
-    }
-    df = pd.DataFrame(data, index=dates)
-    df.index.name = "Date"
-    return df
-
-
-# --- Tests de la Classe DataManager ---
-
-
 class TestDataManager:
+    """Suite de tests pour la classe DataManager."""
 
-    def test_init_success(self, manager, mock_dependencies):
-        """
-        Vérifie que l'initialisation configure correctement les attributs
-        et crée le répertoire de cache.
-        """
-        tmp_path = mock_dependencies["tmp_path"]
+    def test_init_success(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mock_project_root: Path,
+    ):
+        """Teste l'initialisation réussie du DataManager."""
 
-        # Vérifie la configuration
-        assert manager.default_start == "2015-01-01"
-        assert manager.default_end == "2024-12-31"
-        assert manager.default_interval == "1d"
-        assert manager.timezone_str == "Europe/Paris"
-        assert manager.timezone == mock_dependencies["mock_tz"]
+        expected_cache_dir = Path(f"/fake/project/{TEST_CACHE_DIR}")
 
-        # Vérifie le chemin du cache
-        expected_cache_dir = tmp_path / "test_cache"
-        assert manager.cache_dir == expected_cache_dir
-
-        # Vérifie que mkdir a été appelé
-        mock_dependencies["mock_mkdir"].assert_called_once_with(
-            parents=True, exist_ok=True
+        mock_dependencies["logger"].info.assert_called_with(
+            f"DataManager initialisé. Cache: {expected_cache_dir}. Timezone: {data_manager.timezone_str}"
         )
 
-        # Vérifie le logging
-        mock_dependencies["mock_logger"].info.assert_called()
+    def test_init_raises_exception(self, mock_dependencies: Dict[str, MockerFixture]):
+        """Teste que l'init lève une exception si get_settings échoue."""
 
-    def test_init_failure_on_get_settings(self, mocker):
-        """
-        Vérifie qu'une exception est levée si get_settings échoue.
-        """
-        mocker.patch(
-            "data_manager.get_settings", side_effect=Exception("Config load error")
+        mock_dependencies["get_settings"].side_effect = Exception(
+            "Config file not found"
         )
-        mocker.patch("data_manager.setup_logger", return_value=MagicMock())
 
-        with pytest.raises(Exception, match="Config load error"):
+        with pytest.raises(Exception, match="Config file not found"):
             DataManager()
 
-    def test_get_cache_filepath(self, manager, mock_dependencies):
-        """
-        Vérifie la construction correcte du chemin de fichier cache.
-        """
-        tmp_path = mock_dependencies["tmp_path"]
+        mock_dependencies["logger"].error.assert_called_once_with(
+            "Erreur fatale lors de l'initialisation du DataManager: Config file not found"
+        )
 
-        # Cas nominal
-        path1 = manager._get_cache_filepath("AAPL", "1d")
-        assert path1 == tmp_path / "test_cache" / "AAPL_1d.csv"
-
-        # Cas avec ticker spécial (ex: futures)
-        path2 = manager._get_cache_filepath("ES=F", "1h")
-        assert path2 == tmp_path / "test_cache" / "ES_F_1h.csv"
-
-        # Cas avec minuscules
-        path3 = manager._get_cache_filepath("msft", "30m")
-        assert path3 == tmp_path / "test_cache" / "MSFT_30m.csv"
-
-    def test_load_from_cache_success_naive_index(
-        self, manager, mock_dependencies, sample_df_utc, sample_df_paris
+    @pytest.mark.parametrize(
+        "ticker, interval, expected_filename",
+        [
+            ("AAPL", "1d", "AAPL_1d.csv"),
+            ("BTC=F", "1h", "BTC_F_1h.csv"),
+            ("msft", "5m", "MSFT_5m.csv"),
+        ],
+    )
+    def test_get_cache_filepath(
+        self,
+        data_manager: DataManager,
+        ticker: str,
+        interval: str,
+        expected_filename: str,
     ):
-        """
-        Vérifie le chargement réussi depuis le cache quand l'index est 'naive' (lu comme UTC).
-        """
-        # Configure les mocks
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
-        # pd.read_csv lit les dates sans TZ, qui seront localisées en UTC
-        df_naive = sample_df_utc.tz_localize(None)
-        mock_dependencies["mock_read_csv"].return_value = df_naive
+        filepath = data_manager._get_cache_filepath(ticker, interval)
+        expected_path = data_manager.cache_dir / expected_filename
+        assert filepath == expected_path
 
-        # Appelle la méthode
-        result_df = manager.load_from_cache("AAPL", "1d")
-
-        # Vérifie les appels
-        expected_path = manager._get_cache_filepath("AAPL", "1d")
-        mock_dependencies["mock_exists"].assert_called_once_with()
-        mock_dependencies["mock_stat"].assert_called_once_with()
-        mock_dependencies["mock_read_csv"].assert_called_once_with(
-            expected_path, index_col="Date", parse_dates=True
-        )
-
-        # Vérifie le résultat (doit être converti en 'Europe/Paris')
-        assert_frame_equal(result_df, sample_df_paris)
-
-    def test_load_from_cache_success_aware_index(
-        self, manager, mock_dependencies, sample_df_utc, sample_df_paris
+    def test_load_from_cache_success(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """
-        Vérifie le chargement réussi si le CSV a déjà un index aware (ex: UTC).
-        """
-        # Configure les mocks
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
-        mock_dependencies["mock_read_csv"].return_value = sample_df_utc
+        """Teste le chargement réussi depuis le cache (cache hit)."""
 
-        # Appelle la méthode
-        result_df = manager.load_from_cache("AAPL", "1d")
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+        mock_filepath.exists.return_value = True
+        mock_filepath.stat.return_value.st_size = 1024
 
-        # Vérifie le résultat (doit être converti en 'Europe/Paris')
-        assert_frame_equal(result_df, sample_df_paris)
+        naive_dates = pd.date_range("2020-01-01", "2020-01-05")
+        df_from_csv = pd.DataFrame({"close": [1, 2, 3, 4, 5]}, index=naive_dates)
+        df_from_csv.index.name = "Date"
 
-    def test_load_from_cache_miss_file_not_exists(self, manager, mock_dependencies):
-        """Vérifie le cas où le fichier cache n'existe pas."""
-        mock_dependencies["mock_exists"].return_value = False
+        mock_read_csv = mocker.patch("utils.data_manager.pd.read_csv")
+        mock_read_csv.return_value = df_from_csv
 
-        result = manager.load_from_cache("AAPL", "1d")
+        df = data_manager.load_from_cache("AAPL", "1d")
 
-        assert result is None
-        mock_dependencies["mock_stat"].assert_not_called()
-        mock_dependencies["mock_read_csv"].assert_not_called()
-
-    def test_load_from_cache_miss_file_is_empty(self, manager, mock_dependencies):
-        """Vérifie le cas où le fichier cache a une taille de 0 bytes."""
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=0)
-
-        result = manager.load_from_cache("AAPL", "1d")
-
-        assert result is None
-        mock_dependencies["mock_read_csv"].assert_not_called()
-
-    def test_load_from_cache_miss_dataframe_is_empty(self, manager, mock_dependencies):
-        """Vérifie le cas où le fichier CSV est lu mais le DataFrame est vide."""
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
-        mock_dependencies["mock_read_csv"].return_value = pd.DataFrame()
-
-        result = manager.load_from_cache("AAPL", "1d")
-
-        assert result is None
-
-    def test_load_from_cache_miss_invalid_index(self, manager, mock_dependencies):
-        """Vérifie le cas où le DataFrame lu n'a pas un DatetimeIndex."""
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
-        # Crée un DF avec un index numérique
-        df_bad_index = pd.DataFrame({"close": [1, 2, 3]})
-        mock_dependencies["mock_read_csv"].return_value = df_bad_index
-
-        result = manager.load_from_cache("AAPL", "1d")
-
-        assert result is None
-
-    def test_load_from_cache_read_exception(self, manager, mock_dependencies):
-        """Vérifie le cas où pd.read_csv lève une exception."""
-        mock_dependencies["mock_exists"].return_value = True
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
-        mock_dependencies["mock_read_csv"].side_effect = pd.errors.ParserError(
-            "Fichier corrompu"
+        assert df is not None
+        mock_dependencies["logger"].debug.assert_called_with(
+            f"[OK] Cache hit pour AAPL (1d) - {len(df)} lignes chargées"
         )
 
-        result = manager.load_from_cache("AAPL", "1d")
-
-        assert result is None
-        # Vérifie que l'erreur a été loggée
-        assert (
-            "Erreur au chargement du cache"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
-        )
-
-    def test_save_to_cache_success(
-        self, manager, mock_dependencies, sample_df_paris, sample_df_utc
+    def test_load_from_cache_file_not_found(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """Vérifie la sauvegarde réussie d'un DataFrame dans le cache."""
-        mock_dependencies["mock_stat"].return_value = MagicMock(st_size=1024)
+        """Teste le cache miss si le fichier n'existe pas."""
 
-        manager.save_to_cache(sample_df_paris, "AAPL", "1d")
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+        mock_filepath.exists.return_value = False
 
-        expected_path = manager._get_cache_filepath("AAPL", "1d")
+        df = data_manager.load_from_cache("AAPL", "1d")
 
-        # Vérifie que to_csv a été appelé
-        mock_dependencies["mock_to_csv"].assert_called_once()
-
-        # Vérifie que le DF sauvegardé a été converti en UTC
-        # L'argument 'self' de to_csv est le DataFrame
-        args, kwargs = mock_dependencies["mock_to_csv"].call_args
-        df_saved = args[0]
-        assert kwargs["path_or_buf"] == expected_path
-        assert df_saved.index.tz.zone == "UTC"
-        assert_frame_equal(df_saved, sample_df_utc)
-
-    def test_save_to_cache_empty_dataframe(self, manager, mock_dependencies):
-        """Vérifie que rien n'est sauvegardé si le DataFrame est vide."""
-        manager.save_to_cache(pd.DataFrame(), "AAPL", "1d")
-
-        mock_dependencies["mock_to_csv"].assert_not_called()
-        assert (
-            "Tentative de sauvegarde d'un DataFrame vide"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
+        assert df is None
+        mock_dependencies["logger"].debug.assert_called_with(
+            "Cache miss pour AAPL (1d) - fichier inexistant"
         )
 
-    def test_save_to_cache_exception(self, manager, mock_dependencies, sample_df_paris):
-        """Vérifie la gestion d'erreur si to_csv échoue."""
-        mock_dependencies["mock_to_csv"].side_effect = IOError("Disque plein")
-
-        manager.save_to_cache(sample_df_paris, "AAPL", "1d")
-
-        mock_dependencies["mock_to_csv"].assert_called_once()
-        assert (
-            "Échec de la sauvegarde"
-            in mock_dependencies["mock_logger"].error.call_args[0][0]
-        )
-
-    def test_validate_data_success(self, manager, sample_df_paris):
-        """Vérifie qu'un DataFrame valide passe la validation."""
-        assert manager._validate_data(sample_df_paris, "AAPL") == True
-
-    def test_validate_data_empty(self, manager):
-        """Vérifie qu'un DataFrame vide échoue la validation."""
-        assert manager._validate_data(pd.DataFrame(), "AAPL") == False
-
-    def test_validate_data_missing_column(self, manager, sample_df_paris):
-        """Vérifie qu'un DF avec une colonne manquante échoue."""
-        df_invalid = sample_df_paris.drop(columns=["volume"])
-        assert manager._validate_data(df_invalid, "AAPL") == False
-
-    def test_validate_data_nan_values(
-        self, manager, sample_df_paris, mock_dependencies
+    def test_load_from_cache_file_is_empty(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """Vérifie que les NaNs sont signalés (mais la validation passe)."""
-        df_with_nan = sample_df_paris.copy()
-        df_with_nan.loc[df_with_nan.index[1], "open"] = np.nan
+        """Teste le cache miss si le fichier a une taille de 0 bytes."""
 
-        assert manager._validate_data(df_with_nan, "AAPL") == True
-        assert (
-            "Présence de NaN"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+        mock_filepath.exists.return_value = True
+        mock_filepath.stat.return_value.st_size = 0
+
+        df = data_manager.load_from_cache("AAPL", "1d")
+
+        assert df is None
+        mock_dependencies["logger"].warning.assert_called_with(
+            f"Fichier cache {mock_filepath} est vide (0 bytes). Re-téléchargement."
         )
 
-    def test_validate_data_negative_price(self, manager, sample_df_paris):
-        """Vérifie que les prix négatifs échouent la validation."""
-        df_invalid = sample_df_paris.copy()
-        df_invalid.loc[df_invalid.index[1], "low"] = -10
+    def test_load_from_cache_dataframe_empty_after_read(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste le cache miss si le DataFrame lu est vide."""
 
-        assert manager._validate_data(df_invalid, "AAPL") == False
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+        mock_filepath.exists.return_value = True
+        mock_filepath.stat.return_value.st_size = 1024
 
-    def test_validate_data_zero_price(self, manager, sample_df_paris):
-        """Vérifie que les prix nuls échouent la validation."""
-        df_invalid = sample_df_paris.copy()
-        df_invalid.loc[df_invalid.index[1], "close"] = 0
+        mock_read_csv = mocker.patch("utils.data_manager.pd.read_csv")
+        mock_read_csv.return_value = pd.DataFrame()
 
-        assert manager._validate_data(df_invalid, "AAPL") == False
+        df = data_manager.load_from_cache("AAPL", "1d")
 
-    def test_validate_data_gap_warning(self, manager, mock_dependencies):
-        """Vérifie qu'un grand écart de dates déclenche un avertissement (mais passe)."""
-        tz = pytz.timezone("Europe/Paris")
-        dates = [pd.Timestamp("2023-01-01", tz=tz), pd.Timestamp("2023-01-20", tz=tz)]
-        df_gap = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=dates
+        assert df is None
+        mock_dependencies["logger"].warning.assert_called_with(
+            f"DataFrame vide après lecture de {mock_filepath}. Re-téléchargement."
         )
 
-        assert manager._validate_data(df_gap, "AAPL") == True
-        assert (
-            "Trou de données détecté"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
+    def test_load_from_cache_invalid_index(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste le cache miss si l'index n'est pas un DatetimeIndex."""
+
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+        mock_filepath.exists.return_value = True
+        mock_filepath.stat.return_value.st_size = 1024
+
+        df_bad_index = pd.DataFrame({"close": [1, 2]}, index=[0, 1])
+        mock_read_csv = mocker.patch("utils.data_manager.pd.read_csv")
+        mock_read_csv.return_value = df_bad_index
+
+        df = data_manager.load_from_cache("AAPL", "1d")
+
+        assert df is None
+        mock_dependencies["logger"].warning.assert_called_with(
+            f"Index invalide dans {mock_filepath}. Re-téléchargement."
+        )
+
+    def test_save_to_cache_empty_dataframe(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste que la sauvegarde est ignorée si le DataFrame est vide."""
+
+        mock_to_csv = mocker.patch.object(pd.DataFrame, "to_csv")
+        empty_df = pd.DataFrame()
+
+        data_manager.save_to_cache(empty_df, "AAPL", "1d")
+
+        mock_to_csv.assert_not_called()
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Tentative de sauvegarde d'un DataFrame vide pour AAPL. Ignoré."
+        )
+
+    def test_save_to_cache_exception(
+        self,
+        data_manager: DataManager,
+        sample_dataframe: pd.DataFrame,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste la gestion d'erreur si to_csv échoue."""
+
+        mock_filepath = mocker.MagicMock(spec=Path)
+        mocker.patch.object(
+            data_manager, "_get_cache_filepath", return_value=mock_filepath
+        )
+
+        mock_to_csv = mocker.patch.object(pd.DataFrame, "to_csv")
+        mock_to_csv.side_effect = Exception("Disk full")
+
+        data_manager.save_to_cache(sample_dataframe, "AAPL", "1d")
+
+        mock_to_csv.assert_called_once()
+        mock_dependencies["logger"].error.assert_called_with(
+            f"Échec de la sauvegarde dans le cache {mock_filepath}: Disk full"
+        )
+
+    def test_validate_data_success(
+        self,
+        data_manager: DataManager,
+        sample_dataframe: pd.DataFrame,
+        mock_dependencies: Dict[str, MockerFixture],
+    ):
+        """Teste la validation réussie de données valides."""
+
+        is_valid = data_manager._validate_data(sample_dataframe, "AAPL")
+
+        assert is_valid is True
+        mock_dependencies["logger"].debug.assert_called_with("Validation OK pour AAPL.")
+
+    def test_validate_data_empty(
+        self, data_manager: DataManager, mock_dependencies: Dict[str, MockerFixture]
+    ):
+        """Teste la validation échouée (False) si le DataFrame est vide."""
+
+        is_valid = data_manager._validate_data(pd.DataFrame(), "AAPL")
+
+        assert is_valid is False
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Aucune donnée retournée pour AAPL."
+        )
+
+    def test_validate_data_missing_columns(
+        self,
+        data_manager: DataManager,
+        sample_dataframe: pd.DataFrame,
+        mock_dependencies: Dict[str, MockerFixture],
+    ):
+        """Teste la validation échouée (False) si des colonnes manquent."""
+
+        df_invalid = sample_dataframe.drop(columns=["volume", "open"])
+
+        is_valid = data_manager._validate_data(df_invalid, "AAPL")
+
+        assert is_valid is False
+        mock_dependencies["logger"].error.assert_called_with(
+            "Colonnes manquantes pour AAPL: ['open', 'volume']. Données invalides."
+        )
+
+    def test_validate_data_with_nans(
+        self,
+        data_manager: DataManager,
+        sample_dataframe: pd.DataFrame,
+        mock_dependencies: Dict[str, MockerFixture],
+    ):
+        """Teste la validation réussie (True) mais avec un avertissement pour les NaNs."""
+
+        sample_dataframe.loc[sample_dataframe.index[1], "close"] = pd.NA
+        sample_dataframe.loc[sample_dataframe.index[3], "volume"] = pd.NA
+
+        is_valid = data_manager._validate_data(sample_dataframe, "AAPL")
+
+        assert is_valid is True
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Présence de NaN pour AAPL. Colonnes affectées: {'close': 1, 'volume': 1}"
+        )
+
+    @pytest.mark.parametrize("bad_price", [0, -10.5])
+    def test_validate_data_negative_or_zero_price(
+        self,
+        data_manager: DataManager,
+        sample_dataframe: pd.DataFrame,
+        bad_price: float,
+        mock_dependencies: Dict[str, MockerFixture],
+    ):
+        """Teste la validation échouée (False) pour des prix nuls ou négatifs."""
+
+        sample_dataframe.loc[sample_dataframe.index[2], "low"] = bad_price
+
+        is_valid = data_manager._validate_data(sample_dataframe, "AAPL")
+
+        assert is_valid is False
+        mock_dependencies["logger"].warning.assert_called_with(
+            f"Prix low négatifs ou nuls détectés pour AAPL. Données potentiellement corrompues."
+        )
+
+    def test_validate_data_large_gap(
+        self, data_manager: DataManager, mock_dependencies: Dict[str, MockerFixture]
+    ):
+        """Teste la validation réussie (True) mais avec un avertissement pour les grands trous."""
+
+        dates = pd.to_datetime(["2020-01-01", "2020-01-05", "2020-01-20"])
+        df_gaps = pd.DataFrame(
+            {
+                "open": [1, 2, 3],
+                "high": [1, 2, 3],
+                "low": [1, 2, 3],
+                "close": [1, 2, 3],
+                "volume": [1, 2, 3],
+            },
+            index=dates,
+        )
+
+        is_valid = data_manager._validate_data(df_gaps, "AAPL")
+
+        assert is_valid is True
+        mock_dependencies["logger"].warning.assert_called_with(
+            f"Trou de données détecté pour AAPL: 15 days 00:00:00. Vérifier la continuité."
         )
 
     def test_download_data_success(
-        self, manager, mock_dependencies, sample_df_raw_yfinance, sample_df_paris
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """Vérifie un téléchargement réussi (nettoyage, timezone, validation)."""
-        mock_dependencies["mock_yf_ticker_instance"].history.return_value = (
-            sample_df_raw_yfinance
+        """Teste un téléchargement réussi via yfinance."""
+
+        raw_dates = pd.date_range("2020-01-01", "2020-01-05", tz="America/New_York")
+        raw_df = pd.DataFrame(
+            {
+                "Open": [1, 2, 3, 4, 5],
+                "High": [1, 2, 3, 4, 5],
+                "Low": [1, 2, 3, 4, 5],
+                "Close": [1, 2, 3, 4, 5],
+                "Volume": [1, 2, 3, 4, 5],
+            },
+            index=raw_dates,
         )
 
-        result_df = manager.download_data("AAPL", "2023-01-01", "2023-01-05", "1d")
-
-        # Vérifie l'appel à yfinance
-        mock_dependencies["mock_yf_ticker_cls"].assert_called_with("AAPL")
-        mock_dependencies["mock_yf_ticker_instance"].history.assert_called_with(
-            start="2023-01-01",
-            end="2023-01-05",
-            interval="1d",
-            actions=False,
-            auto_adjust=True,
+        mock_dependencies["yf_ticker"].history.return_value = raw_df
+        mock_validate = mocker.patch.object(
+            data_manager, "_validate_data", return_value=True
         )
 
-        # Le DF retourné doit avoir des colonnes en minuscules et la bonne TZ
-        expected_df = sample_df_paris.copy()
-        assert_frame_equal(result_df, expected_df)
+        df = data_manager.download_data("MSFT", "2020-01-01", "2020-01-05", "1d")
 
-    def test_download_data_yfinance_returns_empty(self, manager, mock_dependencies):
-        """Vérifie le cas où yfinance ne retourne aucune donnée."""
-        mock_dependencies["mock_yf_ticker_instance"].history.return_value = (
-            pd.DataFrame()
+        assert not df.empty
+        mock_validate.assert_called_once()
+
+        mock_dependencies["logger"].info.assert_any_call(
+            "Téléchargement de MSFT (2020-01-01 à 2020-01-05, 1d)..."
+        )
+        mock_dependencies["logger"].info.assert_any_call(
+            f"Données téléchargées avec succès pour MSFT ({len(df)} lignes)."
         )
 
-        result_df = manager.download_data("AAPL", "2023-01-01", "2023-01-05", "1d")
+    def test_download_data_yfinance_returns_empty(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste le cas où yfinance ne retourne aucune donnée."""
 
-        assert result_df.empty
-        assert (
-            "Aucune donnée retournée par yfinance"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
+        mock_dependencies["yf_ticker"].history.return_value = pd.DataFrame()
+        mocker.patch.object(data_manager, "_validate_data")
+
+        df = data_manager.download_data("EMPTY", "2020-01-01", "2020-01-05", "1d")
+
+        assert df.empty
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Aucune donnée retournée par yfinance pour EMPTY."
         )
 
-    def test_download_data_yfinance_exception(self, manager, mock_dependencies):
-        """Vérifie le cas où yfinance lève une exception."""
-        mock_dependencies["mock_yf_ticker_instance"].history.side_effect = Exception(
-            "Erreur API"
-        )
+    def test_download_data_invalid_index_type(
+        self, data_manager: DataManager, mock_dependencies: Dict[str, MockerFixture]
+    ):
+        """Teste le cas où yfinance retourne un index non-Datetime."""
 
-        result_df = manager.download_data("AAPL", "2023-01-01", "2023-01-05", "1d")
+        bad_df = pd.DataFrame({"Close": [1, 2]}, index=[0, 1])
+        mock_dependencies["yf_ticker"].history.return_value = bad_df
 
-        assert result_df.empty
-        assert (
-            "Erreur lors du téléchargement"
-            in mock_dependencies["mock_logger"].error.call_args[0][0]
-        )
+        df = data_manager.download_data("BADIDX", "2020-01-01", "2020-01-05", "1d")
 
-    def test_download_data_invalid_index(self, manager, mock_dependencies):
-        """Vérifie le cas où yfinance retourne un index non-datetime."""
-        df_bad_index = pd.DataFrame({"Close": [1, 2, 3]})
-        mock_dependencies["mock_yf_ticker_instance"].history.return_value = df_bad_index
-
-        result_df = manager.download_data("AAPL", "2023-01-01", "2023-01-05", "1d")
-
-        assert result_df.empty
-        assert (
-            "n'est pas un DatetimeIndex"
-            in mock_dependencies["mock_logger"].error.call_args[0][0]
+        assert df.empty
+        mock_dependencies["logger"].error.assert_called_with(
+            "L'index pour BADIDX n'est pas un DatetimeIndex."
         )
 
     def test_download_data_validation_fails(
-        self, manager, mock_dependencies, sample_df_raw_yfinance
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """Vérifie que si les données téléchargées échouent à la validation, un DF vide est retourné."""
-        df_invalid = sample_df_raw_yfinance.copy()
-        df_invalid.loc[df_invalid.index[1], "Low"] = -10  # Prix négatif
+        """Teste le cas où les données téléchargées échouent à la validation."""
 
-        mock_dependencies["mock_yf_ticker_instance"].history.return_value = df_invalid
+        raw_dates = pd.date_range("2020-01-01", "2020-01-05", tz=UTC_TZ)
+        raw_df = pd.DataFrame(
+            {"Close": [1, 2, 3, 4, 5], "Volume": [1, 2, 3, 4, 5]}, index=raw_dates
+        )
+        mock_dependencies["yf_ticker"].history.return_value = raw_df
 
-        result_df = manager.download_data("AAPL", "2023-01-01", "2023-01-05", "1d")
+        mocker.patch.object(data_manager, "_validate_data", return_value=False)
 
-        assert result_df.empty
-        assert (
-            "Validation échouée"
-            in mock_dependencies["mock_logger"].error.call_args[0][0]
+        df = data_manager.download_data("BADVAL", "2020-01-01", "2020-01-05", "1d")
+
+        assert df.empty
+        mock_dependencies["logger"].error.assert_called_with(
+            "Validation échouée pour BADVAL."
         )
 
-    def test_get_data_cache_hit_full_range(
-        self, manager, mock_dependencies, sample_df_paris
+    def test_download_data_yfinance_exception(
+        self, data_manager: DataManager, mock_dependencies: Dict[str, MockerFixture]
     ):
-        """Scénario : Le cache est activé, trouvé, et couvre toute la plage demandée."""
-        # Crée un cache couvrant 2023
-        tz = pytz.timezone("Europe/Paris")
-        full_dates = pd.date_range(
-            start="2023-01-01", end="2023-12-31", freq="1D", tz=tz
-        )
-        full_df = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=full_dates
+        """Teste le cas où yf.Ticker.history lève une exception."""
+
+        mock_dependencies["yf_ticker"].history.side_effect = Exception(
+            "API limit reached"
         )
 
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=full_df
-        )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data"
-        )
+        df = data_manager.download_data("ERR", "2020-01-01", "2020-01-05", "1d")
 
-        # Demande une sous-plage
-        start_req = "2023-02-01"
-        end_req = "2023-02-10"
-        result_df = manager.get_data("AAPL", start_date=start_req, end_date=end_req)
-
-        # Vérifie
-        mock_dependencies["mock_load_from_cache"].assert_called_once_with("AAPL", "1d")
-        mock_dependencies["mock_download_data"].assert_not_called()
-
-        expected_df = full_df.loc[start_req:end_req]
-        assert_frame_equal(result_df, expected_df)
-        assert (
-            "chargées depuis le cache"
-            in mock_dependencies["mock_logger"].info.call_args[0][0]
+        assert df.empty
+        mock_dependencies["logger"].error.assert_called_with(
+            "Erreur lors du téléchargement de ERR: API limit reached"
         )
 
-    def test_get_data_cache_miss_download_success(
-        self, manager, mock_dependencies, sample_df_paris
+    @freeze_time("2024-01-10")
+    def test_get_data_from_cache_success_full_match(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """Scénario : Cache vide, téléchargement réussi, sauvegarde en cache."""
-        # Crée le DF qui sera "téléchargé"
-        tz = pytz.timezone("Europe/Paris")
+        """Teste get_data: succès complet depuis le cache."""
+
         full_dates = pd.date_range(
-            start="2015-01-01", end="2024-12-31", freq="1D", tz=tz
+            DEFAULT_SETTINGS["data"]["default_start_date"], "2024-01-09", tz=PARIS_TZ
         )
-        full_df = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=full_dates
+        cached_df = pd.DataFrame({"close": range(len(full_dates))}, index=full_dates)
+
+        mocker.patch.object(data_manager, "load_from_cache", return_value=cached_df)
+        mocker.patch.object(data_manager, "download_data")
+
+        df = data_manager.get_data(
+            "AAPL", start_date="2020-01-01", end_date="2021-12-31"
         )
 
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=None
+        assert not df.empty
+        mock_dependencies["logger"].info.assert_any_call(
+            "[OK] Données pour AAPL chargées depuis le cache."
         )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data", return_value=full_df
-        )
-        mock_dependencies["mock_save_to_cache"] = mocker.patch.object(
-            manager, "save_to_cache"
+        mock_dependencies["logger"].info.assert_any_call(
+            "[OK] Données prêtes pour AAPL (731 lignes de 2020-01-01 à 2021-12-31)."
         )
 
-        start_req = "2023-01-01"
-        end_req = "2023-01-05"
-        result_df = manager.get_data("AAPL", start_date=start_req, end_date=end_req)
-
-        # Vérifie
-        mock_dependencies["mock_load_from_cache"].assert_called_once_with("AAPL", "1d")
-
-        # Doit télécharger la plage PAR DÉFAUT
-        mock_dependencies["mock_download_data"].assert_called_once_with(
-            "AAPL", "2015-01-01", "2024-12-31", "1d"
-        )
-
-        # Doit sauvegarder le DF téléchargé
-        mock_dependencies["mock_save_to_cache"].assert_called_once_with(
-            full_df, "AAPL", "1d"
-        )
-
-        # Le résultat doit être le DF filtré
-        expected_df = full_df.loc[start_req:end_req]
-        assert_frame_equal(result_df, expected_df)
-
-    def test_get_data_cache_disabled(self, manager, mock_dependencies, sample_df_paris):
-        """Scénario : use_cache=False. Doit télécharger et ne pas sauvegarder."""
-        # Crée le DF qui sera "téléchargé"
-        tz = pytz.timezone("Europe/Paris")
-        full_dates = pd.date_range(
-            start="2015-01-01", end="2024-12-31", freq="1D", tz=tz
-        )
-        full_df = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=full_dates
-        )
-
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache"
-        )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data", return_value=full_df
-        )
-        mock_dependencies["mock_save_to_cache"] = mocker.patch.object(
-            manager, "save_to_cache"
-        )
-
-        start_req = "2023-01-01"
-        end_req = "2023-01-05"
-        result_df = manager.get_data(
-            "AAPL", start_date=start_req, end_date=end_req, use_cache=False
-        )
-
-        # Vérifie
-        mock_dependencies["mock_load_from_cache"].assert_not_called()
-        mock_dependencies["mock_download_data"].assert_called_once_with(
-            "AAPL", "2015-01-01", "2024-12-31", "1d"
-        )
-        mock_dependencies["mock_save_to_cache"].assert_not_called()
-
-        expected_df = full_df.loc[start_req:end_req]
-        assert_frame_equal(result_df, expected_df)
-
-    @pytest.mark.parametrize("scenario", ["start", "end"])
-    def test_get_data_cache_insufficient(self, scenario, manager, mock_dependencies):
-        """Scénario : Le cache est trouvé mais insuffisant (trop tard ou trop tôt)."""
-        # Cache de 2023-02-01 à 2023-10-31
-        tz = pytz.timezone("Europe/Paris")
-        cache_dates = pd.date_range(
-            start="2023-02-01", end="2023-10-31", freq="1D", tz=tz
-        )
-        cache_df = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=cache_dates
-        )
-
-        # DF téléchargé (plage complète)
-        full_dates = pd.date_range(
-            start="2015-01-01", end="2024-12-31", freq="1D", tz=tz
-        )
-        full_df = pd.DataFrame(
-            {"open": 2, "high": 2, "low": 2, "close": 2, "volume": 2}, index=full_dates
-        )
-
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=cache_df
-        )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data", return_value=full_df
-        )
-        mock_dependencies["mock_save_to_cache"] = mocker.patch.object(
-            manager, "save_to_cache"
-        )
-
-        if scenario == "start":
-            # Demande commence *avant* le cache
-            start_req = "2023-01-15"
-            end_req = "2023-02-15"
-        else:  # "end"
-            # Demande finit *après* le cache
-            start_req = "2023-10-15"
-            end_req = "2023-11-15"
-
-        result_df = manager.get_data("AAPL", start_date=start_req, end_date=end_req)
-
-        # Vérifie : doit charger, voir que c'est insuffisant, télécharger, et sauvegarder
-        mock_dependencies["mock_load_from_cache"].assert_called_once()
-        mock_dependencies["mock_download_data"].assert_called_once()
-        mock_dependencies["mock_save_to_cache"].assert_called_once()
-
-        # Le résultat doit venir du NOUVEAU DF (valeurs = 2)
-        expected_df = full_df.loc[start_req:end_req]
-        assert_frame_equal(result_df, expected_df)
-        assert (result_df["open"] == 2).all()
-        assert (
-            "Cache insuffisant" in mock_dependencies["mock_logger"].info.call_args[0][0]
-        )
-
-    def test_get_data_download_fails(self, manager, mock_dependencies):
-        """Scénario : Cache vide et téléchargement échoue."""
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=None
-        )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data", return_value=pd.DataFrame()  # Échec
-        )
-        mock_dependencies["mock_save_to_cache"] = mocker.patch.object(
-            manager, "save_to_cache"
-        )
-
-        result_df = manager.get_data(
-            "AAPL", start_date="2023-01-01", end_date="2023-01-05"
-        )
-
-        mock_dependencies["mock_load_from_cache"].assert_called_once()
-        mock_dependencies["mock_download_data"].assert_called_once()
-        mock_dependencies["mock_save_to_cache"].assert_not_called()  # Car DF vide
-
-        assert result_df.empty
-        assert (
-            "Impossible d'obtenir des données"
-            in mock_dependencies["mock_logger"].error.call_args[0][0]
-        )
-
-    def test_get_data_filtered_result_is_empty(self, manager, mock_dependencies):
-        """Scénario : Données chargées (cache ou DL), mais le filtre final ne donne rien."""
-        tz = pytz.timezone("Europe/Paris")
-        full_dates = pd.date_range(
-            start="2023-01-01", end="2023-12-31", freq="1D", tz=tz
-        )
-        full_df = pd.DataFrame(
-            {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}, index=full_dates
-        )
-
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=full_df
-        )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data"
-        )
-
-        # Demande une plage hors des données
-        result_df = manager.get_data(
-            "AAPL", start_date="2025-01-01", end_date="2025-01-31"
-        )
-
-        mock_dependencies["mock_load_from_cache"].assert_called_once()
-        mock_dependencies["mock_download_data"].assert_not_called()
-
-        assert result_df.empty
-        assert (
-            "Aucune donnée pour AAPL dans la plage"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
-        )
-
-    def test_get_data_cache_date_comparison_fails(
-        self, manager, mock_dependencies, sample_df_paris
+    def test_get_data_cache_miss_then_download(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
     ):
-        """
-        Scénario : Le chargement du cache réussit, mais la comparaison de date
-        échoue (ex: format de date invalide). Doit re-télécharger.
-        """
-        mock_dependencies["mock_load_from_cache"] = mocker.patch.object(
-            manager, "load_from_cache", return_value=sample_df_paris
+        """Teste get_data: cache miss, suivi d'un téléchargement et d'une sauvegarde."""
+
+        mocker.patch.object(data_manager, "load_from_cache", return_value=None)
+
+        full_dates = pd.date_range(
+            DEFAULT_SETTINGS["data"]["default_start_date"],
+            DEFAULT_SETTINGS["data"]["default_end_date"],
+            tz=PARIS_TZ,
         )
-        mock_dependencies["mock_download_data"] = mocker.patch.object(
-            manager, "download_data", return_value=sample_df_paris
+        downloaded_df = pd.DataFrame(
+            {"close": range(len(full_dates))}, index=full_dates
         )
-        mock_dependencies["mock_save_to_cache"] = mocker.patch.object(
-            manager, "save_to_cache"
+        mock_download = mocker.patch.object(
+            data_manager, "download_data", return_value=downloaded_df
+        )
+        mock_save = mocker.patch.object(data_manager, "save_to_cache")
+
+        df = data_manager.get_data(
+            "MSFT", start_date="2023-01-01", end_date="2023-12-31", interval="1d"
         )
 
-        # Fait échouer la conversion en Timestamp
+        assert not df.empty
+        assert len(df) == 365
+        mock_dependencies["logger"].info.assert_any_call(
+            "[OK] Données prêtes pour MSFT (365 lignes de 2023-01-01 à 2023-12-31)."
+        )
+
+    @pytest.mark.parametrize("case", ["insufficient_start", "insufficient_end"])
+    def test_get_data_cache_insufficient(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+        case: str,
+    ):
+        """Teste get_data: cache partiel, forçant le re-téléchargement."""
+
+        partial_dates = pd.date_range("2020-01-01", "2022-12-31", tz=PARIS_TZ)
+        cached_df = pd.DataFrame(
+            {"close": range(len(partial_dates))}, index=partial_dates
+        )
+        mocker.patch.object(data_manager, "load_from_cache", return_value=cached_df)
+
+        full_dates = pd.date_range(
+            DEFAULT_SETTINGS["data"]["default_start_date"],
+            DEFAULT_SETTINGS["data"]["default_end_date"],
+            tz=PARIS_TZ,
+        )
+        downloaded_df = pd.DataFrame(
+            {"close": range(len(full_dates))}, index=full_dates
+        )
+        mock_download = mocker.patch.object(
+            data_manager, "download_data", return_value=downloaded_df
+        )
+        mocker.patch.object(data_manager, "save_to_cache")
+
+        start_req, end_req = "2019-01-01", "2021-01-01"
+        if case == "insufficient_end":
+            start_req, end_req = "2021-01-01", "2024-01-01"
+
+        df = data_manager.get_data("TSLA", start_date=start_req, end_date=end_req)
+
+        mock_dependencies["logger"].info.assert_any_call(
+            f"Cache insuffisant pour TSLA (demandé: {start_req} à {end_req}). Re-téléchargement."
+        )
+        assert not df.empty
+
+    def test_get_data_no_cache_flag(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste get_data: use_cache=False force le téléchargement et empêche la sauvegarde."""
+
+        mock_load = mocker.patch.object(data_manager, "load_from_cache")
+
+        full_dates = pd.date_range(
+            DEFAULT_SETTINGS["data"]["default_start_date"],
+            DEFAULT_SETTINGS["data"]["default_end_date"],
+            tz=PARIS_TZ,
+        )
+        downloaded_df = pd.DataFrame(
+            {"close": range(len(full_dates))}, index=full_dates
+        )
+        mock_download = mocker.patch.object(
+            data_manager, "download_data", return_value=downloaded_df
+        )
+
+        mock_save = mocker.patch.object(data_manager, "save_to_cache")
+
+        df = data_manager.get_data(
+            "GOOG", start_date="2023-01-01", end_date="2023-01-31", use_cache=False
+        )
+
+        mock_load.assert_not_called()
+        mock_download.assert_called_once()
+        mock_save.assert_not_called()
+        assert len(df) == 31
+
+    def test_get_data_download_fails(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste get_data: échec du chargement ET échec du téléchargement."""
+
+        mocker.patch.object(data_manager, "load_from_cache", return_value=None)
+        mocker.patch.object(data_manager, "download_data", return_value=pd.DataFrame())
+        mocker.patch.object(data_manager, "save_to_cache")
+
+        df = data_manager.get_data("FAIL", "2020-01-01", "2020-01-31")
+
+        assert df.empty
+        mock_dependencies["logger"].error.assert_called_with(
+            "Impossible d'obtenir des données pour FAIL."
+        )
+
+    def test_get_data_filtered_is_empty(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste get_data: succès du cache/téléchargement, mais le filtrage ne donne rien."""
+
+        # Arrange
+        # 1. Le cache (2015-2024) est chargé
+        full_dates = pd.date_range("2015-01-01", "2024-12-31", tz=PARIS_TZ)
+        cached_df = pd.DataFrame({"close": range(len(full_dates))}, index=full_dates)
+        mocker.patch.object(data_manager, "load_from_cache", return_value=cached_df)
+
+        # --- CORRECTION 2: Simuler le re-téléchargement (qui ramène les mêmes données) ---
+        # Le code va voir que 2026 manque et appeler download_data
+        # Nous simulons que le téléchargement retourne les mêmes données (2015-2024)
+        mocker.patch.object(data_manager, "download_data", return_value=cached_df)
+
+        # Act
+        # Demande une plage future
+        df = data_manager.get_data(
+            "AAPL", start_date="2026-01-01", end_date="2026-12-31"
+        )
+
+        # Assert
+        # 1. Vérifier que le DataFrame final est bien vide
+        assert df.empty
+
+        # 2. Vérifier que le log "Cache insuffisant" a été appelé (car 2026 > 2024)
+        mock_dependencies["logger"].info.assert_any_call(
+            "Cache insuffisant pour AAPL (demandé: 2026-01-01 à 2026-12-31). Re-téléchargement."
+        )
+
+        # 3. Vérifier que le warning final a été appelé
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Aucune donnée pour AAPL dans la plage 2026-01-01 à 2026-12-31."
+        )
+
+    def test_get_data_cache_date_comparison_error(
+        self,
+        data_manager: DataManager,
+        mock_dependencies: Dict[str, MockerFixture],
+        mocker: MockerFixture,
+    ):
+        """Teste get_data: une erreur de conversion de date dans le cache force le re-téléchargement."""
+
+        full_dates = pd.date_range("2015-01-01", "2024-12-31", tz=PARIS_TZ)
+        cached_df = pd.DataFrame({"close": range(len(full_dates))}, index=full_dates)
+        mocker.patch.object(data_manager, "load_from_cache", return_value=cached_df)
+
         mocker.patch(
-            "data_manager.pd.Timestamp", side_effect=ValueError("Date invalide")
+            "utils.data_manager.pd.Timestamp", side_effect=Exception("Invalid date")
         )
 
-        manager.get_data("AAPL", start_date="DATE_INVALIDE", end_date="2023-01-05")
-
-        # Vérifie
-        mock_dependencies["mock_load_from_cache"].assert_called_once()
-        assert (
-            "Erreur de comparaison de date"
-            in mock_dependencies["mock_logger"].warning.call_args[0][0]
+        mock_download = mocker.patch.object(
+            data_manager, "download_data", return_value=cached_df
         )
-        # Doit avoir re-téléchargé
-        mock_dependencies["mock_download_data"].assert_called_once()
-        mock_dependencies["mock_save_to_cache"].assert_called_once()
+
+        data_manager.get_data("AAPL", start_date="2020-01-01", end_date="2021-01-01")
+
+        mock_dependencies["logger"].warning.assert_called_with(
+            "Erreur de comparaison de date: Invalid date. Re-téléchargement."
+        )
+        mock_download.assert_called_once()

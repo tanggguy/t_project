@@ -1,17 +1,234 @@
-# c:/Users/saill/Desktop/t_project/tests/unit/test_data_processor.py
+# tests/unit/test_data_processor.py
+
+import pytest
+import pandas as pd
+import numpy as np
+from pandas.testing import assert_frame_equal
+import logging
+from utils.data_processor import add_returns, handle_outliers, resample_data
+
+
+# --- Fixtures ---
+@pytest.fixture
+def sample_data():
+    """Crée un DataFrame de test avec des données OHLCV"""
+    dates = pd.date_range(start="2023-01-01", periods=5, freq="1D")
+    data = {
+        "open": [100.0, 101.0, 102.0, 103.0, 104.0],
+        "high": [105.0, 106.0, 107.0, 108.0, 109.0],
+        "low": [95.0, 96.0, 97.0, 98.0, 99.0],
+        "close": [100.0, 102.0, 101.0, 103.0, 102.0],
+        "volume": [1000, 1100, 1200, 1300, 1400],
+    }
+    df = pd.DataFrame(data, index=dates)
+    df.index.name = "Date"
+    return df
+
+
+@pytest.fixture
+def mock_logger(monkeypatch):
+    """Fixture to provide a MagicMock logger and patch the data_processor logger.
+
+    Tests that assert logger calls request this fixture. It patches
+    utils.data_processor.logger so calls inside the module go to the mock.
+    """
+    from unittest.mock import MagicMock
+
+    mock_log = MagicMock()
+    # Patch the logger used inside the data_processor module only when requested
+    monkeypatch.setattr("utils.data_processor.logger", mock_log)
+    return mock_log
+
+
+@pytest.fixture
+def sample_data_with_outlier(sample_data):
+    """Crée un DataFrame avec un outlier"""
+    df = sample_data.copy()
+    df.loc[df.index[2], "close"] = 200.0  # Outlier au milieu
+    return df
+
+
+# --- Tests pour add_returns ---
+def test_add_returns_nominal(sample_data):
+    """Test le calcul des rendements dans un cas normal"""
+    result = add_returns(sample_data)
+
+    # Vérifier que les colonnes ont été ajoutées
+    assert "pct_return" in result.columns
+    assert "log_return" in result.columns
+
+    # Vérifier les calculs (premier jour devrait être 0)
+    assert result["pct_return"].iloc[0] == 0.0
+    assert result["log_return"].iloc[0] == 0.0
+
+    # Vérifier un calcul de rendement
+    expected_pct_return = (102.0 - 100.0) / 100.0  # Jour 2
+    assert result["pct_return"].iloc[1] == pytest.approx(expected_pct_return)
+
+
+def test_add_returns_missing_close(sample_data):
+    """Test le comportement quand la colonne 'close' est manquante"""
+    df = sample_data.drop(columns=["close"])
+    result = add_returns(df)
+    assert "pct_return" not in result.columns
+    assert "log_return" not in result.columns
+
+
+def test_add_returns_single_row():
+    """Test avec un DataFrame d'une seule ligne"""
+    df = pd.DataFrame({"close": [100.0]}, index=[pd.Timestamp("2023-01-01")])
+    result = add_returns(df)
+    assert result["pct_return"].iloc[0] == 0.0
+    assert result["log_return"].iloc[0] == 0.0
+
+
+# --- Tests pour handle_outliers ---
+def test_handle_outliers_nominal(sample_data_with_outlier, mock_logger):
+    """Test la gestion des outliers dans un cas normal"""
+    # Ajouter un outlier plus significatif
+    df = add_returns(sample_data_with_outlier.copy())
+
+    result = handle_outliers(df, quantile=0.1)
+    
+    assert mock_logger.info.called
+    assert "rendements extrêmes ont été" in mock_logger.info.call_args[0][0]
+
+    # Vérifier que l'outlier a été écrêté
+    original_value = sample_data_with_outlier["close"].iloc[2]
+    assert (
+        result["pct_return"].iloc[2]
+        != (original_value - sample_data_with_outlier["close"].iloc[1])
+        / sample_data_with_outlier["close"].iloc[1]
+    )
+
+
+def test_handle_outliers_no_returns(sample_data, mock_logger):
+    """Test handle_outliers sans colonne de rendements"""
+    result = handle_outliers(sample_data.copy())
+    mock_logger.warning.assert_called_once_with(
+        "La méthode 'clip_returns' nécessite 'pct_return'. "
+        "Appel de add_returns() implicitement."
+    )
+    assert "pct_return" in result.columns  # La colonne devrait être ajoutée
+
+
+def test_handle_outliers_invalid_method(sample_data_with_outlier, mock_logger):
+    """Test avec une méthode invalide"""
+    handle_outliers(sample_data_with_outlier, method="invalid_method")
+    mock_logger.warning.assert_called_once_with(
+        "Méthode d'outlier 'invalid_method' non reconnue. Aucune action."
+    )
+
+
+def test_handle_outliers_single_row():
+    """Test avec un DataFrame d'une seule ligne"""
+    df = pd.DataFrame({"close": [100.0]}, index=[pd.Timestamp("2023-01-01")])
+    df = add_returns(df)
+    result = handle_outliers(df)
+    assert_frame_equal(result, df)  # Aucun changement attendu
+
+
+# --- Tests pour resample_data ---
+def test_resample_data_weekly(sample_data):
+    """Test le resampling hebdomadaire"""
+    result = resample_data(sample_data, rule="1W")
+
+    # Vérifier que le nombre de lignes a diminué
+    assert len(result) < len(sample_data)
+
+    # Vérifier les règles d'agrégation pour la première ligne
+    # Calculer l'attendu via pandas pour éviter les suppositions sur l'alignement des bins
+    expected = sample_data.resample("1W").apply(
+        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    )
+    assert result["open"].iloc[0] == expected["open"].iloc[0]
+    assert result["high"].iloc[0] == expected["high"].iloc[0]
+    assert result["low"].iloc[0] == expected["low"].iloc[0]
+    assert result["close"].iloc[0] == expected["close"].iloc[0]
+    assert result["volume"].iloc[0] == expected["volume"].iloc[0]
+
+
+def test_resample_data_invalid_index(mock_logger):
+    """Test avec un index non temporel"""
+    df = pd.DataFrame(
+        {"close": [100.0, 101.0], "volume": [1000, 1100]}, index=[1, 2]
+    )  # Index numérique
+
+    result = resample_data(df)
+    assert_frame_equal(result, df)  # Devrait retourner le DataFrame inchangé
+    mock_logger.error.assert_called_once_with(
+        "L'index n'est pas un DatetimeIndex. Resampling impossible."
+    )
+
+
+def test_resample_data_missing_columns(sample_data):
+    """Test avec des colonnes manquantes"""
+    df = sample_data[["close", "volume"]]  # Seulement close et volume
+    result = resample_data(df, rule="1W")
+
+    assert "close" in result.columns
+    assert "volume" in result.columns
+    assert "open" not in result.columns
+    assert "high" not in result.columns
+    assert "low" not in result.columns
+
+
+def test_resample_data_empty():
+    """Test avec un DataFrame vide"""
+    df = pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    df.index = pd.DatetimeIndex([])  # Index temporel vide
+    result = resample_data(df)
+    assert len(result) == 0
+    assert list(result.columns) == list(df.columns)
+
+
+def test_resample_data_invalid_rule(sample_data, mock_logger):
+    """Test avec une règle de resampling invalide"""
+    result = resample_data(sample_data, rule="invalid")
+    mock_logger.error.assert_called_once()
+    assert "Échec du resampling" in mock_logger.error.call_args[0][0]
+    assert_frame_equal(result, sample_data)  # Devrait retourner le DataFrame original
+
+
+# --- Tests de cas limites et valeurs extrêmes ---
+def test_extreme_returns(mock_logger):
+    """Test avec des rendements extrêmes"""
+    dates = pd.date_range(start="2023-01-01", periods=3, freq="1D")
+    df = pd.DataFrame(
+        {"close": [100.0, 1000.0, 10.0]}, index=dates  # Variations extrêmes
+    )
+
+    df = add_returns(df)
+    handle_outliers(df, quantile=0.1)
+    mock_logger.info.assert_called_once()
+    assert "rendements extrêmes ont été" in mock_logger.info.call_args[0][0]
+
+
+def test_zero_values():
+    """Test avec des valeurs très petites"""
+    dates = pd.date_range(start="2023-01-01", periods=3, freq="1D")
+    df = pd.DataFrame(
+        {"close": [100.0, 1.0, 100.0]}, index=dates  # Une valeur plus raisonnable
+    )
+
+    df = add_returns(df)
+    # Vérifier que les rendements sont calculés sans erreur
+    assert np.all(np.isfinite(df["pct_return"]))  # Pas de valeurs infinies
+    assert np.all(np.isfinite(df["log_return"]))  # Pas de valeurs infinies
+
+    # Vérifier que les valeurs sont dans des limites raisonnables
+    assert (
+        df["pct_return"].abs().max() < 100
+    )  # Les rendements ne devraient pas être trop extrêmes
+
+
 import pandas as pd
 import numpy as np
 import pytest
 from unittest.mock import MagicMock
 
 
-# Mock the logger before importing the module under test
-@pytest.fixture(autouse=True)
-def mock_logger(mocker):
-    """Fixture to mock the logger used in the data_processor module."""
-    mock_log = MagicMock()
-    mocker.patch("utils.data_processor.logger", mock_log)
-    return mock_log
+# Suppression du mock du logger pour permettre la capture des logs réels
 
 
 # Now, import the functions to be tested

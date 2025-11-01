@@ -25,3 +25,13 @@ python scripts/run_backtest.py --config config/backtest_config.yaml
 # Avec le script helper
 ./run_backtest.sh config/backtest_config.yaml
 ./run_backtest.sh --list
+
+
+pytest --cov=nom_du_module tests/
+pytest --cov=utils tests/
+pytest --cov=utils --cov-report=term-missing tests/
+
+
+mut.py --target utils --unit-test tests --runner pytest
+
+
