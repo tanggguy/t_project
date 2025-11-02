@@ -7,8 +7,9 @@ import backtrader as bt
 
 # --- 3. Imports locaux du projet ---
 # (Aucun import local nécessaire)
+from utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__, log_file="logs/risk_management/position_sizing")
 
 
 class FixedSizer(bt.Sizer):
@@ -46,11 +47,12 @@ class FixedSizer(bt.Sizer):
         else:
             price = data.close[0]
             available_capital = cash * self.p.pct_size
-            size = int(available_capital / price)
+            size = int(available_capital / price) if price > 0 else 0
 
-        logger.debug(
+        logger.info(
             f"FixedSizer: size={size}, cash={cash:.2f}, price={data.close[0]:.2f}"
         )
+
         return size
 
 
@@ -100,7 +102,7 @@ class FixedFractionalSizer(bt.Sizer):
         max_size = int(cash / price)
         size = min(size, max_size)
 
-        logger.debug(
+        logger.info(
             f"FixedFractionalSizer: size={size}, risk_amount={risk_amount:.2f}, "
             f"risk_per_share={risk_per_share:.2f}, portfolio_value={portfolio_value:.2f}"
         )
@@ -180,7 +182,7 @@ class VolatilityBasedSizer(bt.Sizer):
         max_size = int(cash / price)
         size = min(size, max_size)
 
-        logger.debug(
+        logger.info(
             f"VolatilityBasedSizer: size={size}, risk_amount={risk_amount:.2f}, "
             f"ATR={atr_value:.2f}, risk_per_share={risk_per_share:.2f}, "
             f"portfolio_value={portfolio_value:.2f}"

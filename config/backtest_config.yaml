@@ -70,7 +70,7 @@ backtest:
     # --- Paramètres pour méthode "volatility_based" ---
     # Taille adaptée à la volatilité (ATR)
     volatility_based:
-      risk_pct: 0.05  # 2% du capital à risquer par trade
+      risk_pct: 0.02  # 2% du capital à risquer par trade
       atr_period: 14  # Période de l'ATR
       atr_multiplier: 2.0  # Multiplicateur de l'ATR pour le stop
 

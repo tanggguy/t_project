@@ -296,7 +296,8 @@ def configure_position_sizing(engine: BacktestEngine, config: Dict[str, Any]) ->
         engine (BacktestEngine): L'instance du moteur de backtest.
         config (Dict[str, Any]): La configuration complète chargée du YAML.
     """
-    ps_config = config.get("position_sizing", {})
+    bt_config = config.get("backtest", {})
+    ps_config = bt_config.get("position_sizing", {})
 
     if not ps_config.get("enabled", False):
         logger.info("Position sizing désactivé - utilisation du sizing par défaut")

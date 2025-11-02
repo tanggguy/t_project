@@ -6,6 +6,9 @@ import backtrader as bt
 
 # --- 3. Imports locaux du projet ---
 from strategies.managed_strategy import ManagedStrategy
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__, log_file="logs/strategies/managed_strategy")
 
 
 class SimpleMaManagedStrategy(ManagedStrategy):
@@ -47,20 +50,15 @@ class SimpleMaManagedStrategy(ManagedStrategy):
         super().__init__()
 
         # --- Indicateurs de la stratégie ---
-        self.sma_fast = bt.indicators.SMA(
-            self.data.close, period=self.p.fast_period
-        )
-        self.sma_slow = bt.indicators.SMA(
-            self.data.close, period=self.p.slow_period
-        )
+        self.sma_fast = bt.indicators.SMA(self.data.close, period=self.p.fast_period)
+        self.sma_slow = bt.indicators.SMA(self.data.close, period=self.p.slow_period)
 
         # Indicateur de croisement
         self.crossover = bt.indicators.CrossOver(self.sma_fast, self.sma_slow)
 
-        self.log(
+        logger.info(
             f"SimpleMaManagedStrategy initialisée - "
-            f"Fast MA: {self.p.fast_period}, Slow MA: {self.p.slow_period}",
-            logging.INFO,
+            f"Fast MA: {self.p.fast_period}, Slow MA: {self.p.slow_period}"
         )
 
     def next_custom(self) -> None:
@@ -71,14 +69,14 @@ class SimpleMaManagedStrategy(ManagedStrategy):
         Cette méthode se concentre uniquement sur les signaux d'entrée.
         """
         # Éviter d'entrer si on attend que l'ATR soit prêt
-        if self.atr and len(self.atr) < self.p.atr_period:
-            return
+        # if self.atr and len(self.atr) < self.p.atr_period:
+        #     return
 
         # Signal d'achat : Golden Cross
         if self.crossover[0] > 0:
-            self.log(
-                f"🚀 Signal ACHAT - Golden Cross "
-                f"(Fast: {self.sma_fast[0]:.2f}, Slow: {self.sma_slow[0]:.2f})",
-                level=logging.INFO,
+
+            logger.info(
+                f"Signal ACHAT - Golden Cross prix {self.data_close[0]:.2f} "
+                f"(Fast: {self.sma_fast[0]:.2f}, Slow: {self.sma_slow[0]:.2f})"
             )
             self.buy()

@@ -334,6 +334,9 @@ class ManagedStrategy(BaseStrategy):
         Cette méthode ne doit PAS être surchargée par les classes enfants.
         Les classes enfants doivent implémenter next_custom() à la place.
         """
+        if self.order:
+            return
+
         # --- Si en position : gérer les sorties ---
         if self.position:
             # Première bougie après l'entrée : calculer les niveaux
