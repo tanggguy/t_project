@@ -22,6 +22,8 @@ python scripts/run_backtest.py --list-strategies
 # Lancer un backtest
 python scripts/run_backtest.py --config config/backtest_config.yaml
 
+python scripts/run_backtest.py --config config/backtest_config1111.yaml
+
 # Avec le script helper
 ./run_backtest.sh config/backtest_config.yaml
 ./run_backtest.sh --list

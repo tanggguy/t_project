@@ -28,6 +28,11 @@ from utils.logger import setup_logger
 from utils.data_manager import DataManager
 from backtesting.engine import BacktestEngine
 from strategies.base_strategy import BaseStrategy
+from risk_management.position_sizing import (
+    FixedSizer,
+    FixedFractionalSizer,
+    VolatilityBasedSizer,
+)
 
 # Initialisation du logger
 logger = setup_logger(__name__, log_file="logs/backtest/run_backtest.log")
@@ -283,6 +288,82 @@ def save_results(
     logger.info(f"Résultats sauvegardés dans: {filepath}")
 
 
+def configure_position_sizing(engine: BacktestEngine, config: Dict[str, Any]) -> None:
+    """
+    Configure le position sizing à partir de la configuration.
+
+    Args:
+        engine (BacktestEngine): L'instance du moteur de backtest.
+        config (Dict[str, Any]): La configuration complète chargée du YAML.
+    """
+    ps_config = config.get("position_sizing", {})
+
+    if not ps_config.get("enabled", False):
+        logger.info("Position sizing désactivé - utilisation du sizing par défaut")
+        return
+
+    method = ps_config.get("method", "fixed")
+    logger.info(f"Configuration du position sizing: {method}")
+
+    try:
+        if method == "fixed":
+            # Position sizing fixe
+            fixed_config = ps_config.get("fixed", {})
+            stake = fixed_config.get("stake", None)
+            pct_size = fixed_config.get("pct_size", 1.0)
+
+            engine.add_sizer(FixedSizer, stake=stake, pct_size=pct_size)
+
+            if stake:
+                logger.info(f"Sizer fixe configuré: {stake} unités par trade")
+            else:
+                logger.info(f"Sizer fixe configuré: {pct_size:.1%} du capital")
+
+        elif method == "fixed_fractional":
+            # Position sizing basé sur le risque fixe
+            ff_config = ps_config.get("fixed_fractional", {})
+            risk_pct = ff_config.get("risk_pct", 0.02)
+            stop_distance = ff_config.get("stop_distance", 0.03)
+
+            engine.add_sizer(
+                FixedFractionalSizer, risk_pct=risk_pct, stop_distance=stop_distance
+            )
+
+            logger.info(
+                f"Sizer Fixed Fractional configuré: "
+                f"Risque {risk_pct:.1%}, Stop {stop_distance:.1%}"
+            )
+
+        elif method == "volatility_based":
+            # Position sizing basé sur la volatilité (ATR)
+            vb_config = ps_config.get("volatility_based", {})
+            risk_pct = vb_config.get("risk_pct", 0.02)
+            atr_period = vb_config.get("atr_period", 14)
+            atr_multiplier = vb_config.get("atr_multiplier", 2.0)
+
+            engine.add_sizer(
+                VolatilityBasedSizer,
+                risk_pct=risk_pct,
+                atr_period=atr_period,
+                atr_multiplier=atr_multiplier,
+            )
+
+            logger.info(
+                f"Sizer Volatility-Based configuré: "
+                f"Risque {risk_pct:.1%}, ATR {atr_period} x {atr_multiplier}"
+            )
+
+        else:
+            logger.warning(
+                f"Méthode de position sizing inconnue: {method}. "
+                "Position sizing désactivé."
+            )
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la configuration du position sizing: {e}")
+        logger.warning("Le backtest continuera sans position sizing configuré.")
+
+
 def main() -> None:
     """
     Fonction principale du script.
@@ -411,7 +492,11 @@ def main() -> None:
             engine.cerebro.broker.set_slippage_perc(perc=slippage)
             logger.info(f"Slippage (config): {slippage:.4%}")
 
+    # Ajouter les données
     engine.add_data(df)
+    # Configurer le position sizing
+    configure_position_sizing(engine, config)
+    # Ajouter la stratégie
     engine.add_strategy(strategy_class, **final_params)
 
     logger.info("Lancement du backtest...")

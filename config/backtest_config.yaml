@@ -1,98 +1,197 @@
-# Configuration du backtest
-# Ce fichier permet de configurer tous les paramètres d'un backtest
-
-# backtest:
-#   # Nom de la stratégie à utiliser (sans le suffixe "Strategy")
-#   # Exemples: MaCrossover, RsiOversold, MacdMomentum
-#   strategy: "RsiOversold"
-  
-#   # Paramètres spécifiques à la stratégie (optionnel)
-#   # Si non spécifiés, les valeurs par défaut de la stratégie seront utilisées
-#   strategy_params:
-#     rsi_period: 14
-#     oversold_level: 30
-#     overbought_level: 70
-  
-#   # Données à charger
-#   data:
-#     ticker: "TSLA"
-#     # period: "1d"              # Format yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-#     # Ou utiliser start_date et end_date à la place de period:
-#     start_date: "2020-01-01"
-#     end_date: "2025-11-01"
-  
-#   # Configuration du broker
-#   broker:
-#     initial_capital: 10000.0
-#     commission_pct: 0.001     # 0.1% par transaction
-#     slippage_pct: 0.0         # Optionnel
-  
-#   # Options d'affichage et de sortie
-#   output:
-#     plot: true               # Afficher les graphiques
-#     save_results: true        # Sauvegarder les résultats dans un fichier
-#     results_dir: "results/backtests"
-#     verbose: true             # Logs détaillés
-
-# ============================================================================
-# EXEMPLES DE CONFIGURATIONS POUR DIFFÉRENTES STRATÉGIES
-# ============================================================================
-
-# --- Configuration pour MA Crossover ---
+# ========================================
+# Configuration du Backtest
+# Compatible avec votre structure existante
+# ========================================
 backtest:
-  # Nom de la stratégie à utiliser (sans le suffixe "Strategy")
-  # Exemples: MaCrossover, RsiOversold, MacdMomentum
-  strategy: "MaCrossover"
+  # Nom de la stratégie à utiliser
+  # Pour utiliser ManagedStrategy, utilisez "SimpleMaManaged"
+  strategy: "SimpleMaManaged"
   
-  # Paramètres spécifiques à la stratégie (optionnel)
-  # Si non spécifiés, les valeurs par défaut de la stratégie seront utilisées
+  # ========================================
+  # Paramètres de la stratégie
+  # ========================================
   strategy_params:
+    # --- Paramètres spécifiques à la stratégie ---
     fast_period: 10
     slow_period: 30
-    stop_pct: 0.02  # 2% de stop loss
-  
+    
+    # ========================================
+    # NOUVEAUX: Risk Management
+    # ========================================
+    
+    # --- Stop Loss Configuration ---
+    use_stop_loss: true
+    stop_loss_type: "fixed"  # "fixed", "trailing", "atr", "support_resistance"
+    
+    # Paramètres pour stop_loss_type="fixed" ou "trailing"
+    stop_loss_pct: 0.02  # 2% de distance au stop
+    
+    # Paramètres pour stop_loss_type="atr"
+    stop_loss_atr_mult: 2.0  # Stop à 2x ATR sous le prix d'entrée
+    
+    # Paramètres pour stop_loss_type="support_resistance"
+    stop_loss_lookback: 20  # Chercher le support sur 20 périodes
+    
+    # --- Take Profit Configuration ---
+    use_take_profit: true
+    take_profit_type: "fixed"  # "fixed", "atr", "support_resistance"
+    
+    # Paramètres pour take_profit_type="fixed"
+    take_profit_pct: 0.04  # 4% de gain visé
+    
+    # Paramètres pour take_profit_type="atr"
+    take_profit_atr_mult: 4.0  # TP à 4x ATR au-dessus (ratio 1:2 avec SL)
+    
+    # Paramètres pour take_profit_type="support_resistance"
+    take_profit_lookback: 20  # Chercher la résistance sur 20 périodes
+    
+    # --- Indicateurs Requis ---
+    atr_period: 14  # Période de l'ATR (si SL ou TP utilise ATR)
+
+  # ========================================
+  # NOUVEAU: Position Sizing
+  # ========================================
+  position_sizing:
+    enabled: true
+    method: "volatility_based"  # "fixed", "fixed_fractional", "volatility_based"
+    
+    # --- Paramètres pour méthode "fixed" ---
+    # Investit un montant fixe ou un pourcentage fixe
+    fixed:
+      stake: null  # Nombre d'unités fixes (prioritaire si défini)
+      pct_size: 0.5  # Sinon, % du capital à investir (0.95 = 95%)
+    
+    # --- Paramètres pour méthode "fixed_fractional" ---
+    # Taille basée sur le risque fixe par trade
+    fixed_fractional:
+      risk_pct: 0.5  # 2% du capital à risquer par trade
+      stop_distance: 0.1  # 3% de distance au stop loss
+    
+    # --- Paramètres pour méthode "volatility_based" ---
+    # Taille adaptée à la volatilité (ATR)
+    volatility_based:
+      risk_pct: 0.05  # 2% du capital à risquer par trade
+      atr_period: 14  # Période de l'ATR
+      atr_multiplier: 2.0  # Multiplicateur de l'ATR pour le stop
+
+  # ========================================
   # Données à charger
+  # ========================================
   data:
     ticker: "AAPL"
-    # period: "1d"              # Format yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
-    # Ou utiliser start_date et end_date à la place de period:
+    
+    # Option 1: Période relative (décommentez pour utiliser)
+    # period: "2y"  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    
+    # Option 2: Dates absolues
     start_date: "2020-01-01"
     end_date: "2025-11-01"
   
+  # ========================================
   # Configuration du broker
+  # ========================================
   broker:
     initial_capital: 10000.0
     commission_pct: 0.001     # 0.1% par transaction
     slippage_pct: 0.0         # Optionnel
   
+  # ========================================
   # Options d'affichage et de sortie
+  # ========================================
   output:
     plot: true               # Afficher les graphiques
     save_results: true        # Sauvegarder les résultats dans un fichier
     results_dir: "results/backtests"
     verbose: true             # Logs détaillés
 
+# ========================================
+# EXEMPLES DE CONFIGURATIONS ALTERNATIVES
+# ========================================
 
-# --- Configuration pour MACD Momentum ---
+# --- Exemple 1: Configuration Conservative ---
+# Stratégie MA simple avec risque minimal
+#
 # backtest:
-#   strategy: "MacdMomentum"
+#   strategy: "SimpleMaManagedStrategy"
 #   strategy_params:
-#     macd_fast: 12
-#     macd_slow: 26
-#     macd_signal: 9
-#   data:
-#     ticker: "GOOGL"
-#     start_date: "2022-01-01"
-#     end_date: "2024-01-01"
-#   broker:
-#     initial_capital: 20000.0
-#   output:
-#     plot: false
-#     save_results: true
+#     fast_period: 10
+#     slow_period: 30
+#     
+#     # Stop Loss fixe de 2%
+#     use_stop_loss: true
+#     stop_loss_type: "fixed"
+#     stop_loss_pct: 0.02
+#     
+#     # Take Profit fixe de 4% (ratio 1:2)
+#     use_take_profit: true
+#     take_profit_type: "fixed"
+#     take_profit_pct: 0.04
+#   
+#   position_sizing:
+#     enabled: true
+#     method: "fixed"
+#     fixed:
+#       pct_size: 0.50  # N'investir que 50% du capital
 
-# --- Configuration minimale (utilise tous les défauts) ---
+# --- Exemple 2: Configuration Aggressive ---
+# Laisser courir les profits avec trailing stop
+#
 # backtest:
-#   strategy: "RsiOversold"
-#   data:
-#     ticker: "AAPL"
-#     period: "1y"
+#   strategy: "SimpleMaManagedStrategy"
+#   strategy_params:
+#     fast_period: 10
+#     slow_period: 30
+#     
+#     # Trailing stop de 5%
+#     use_stop_loss: true
+#     stop_loss_type: "trailing"
+#     stop_loss_pct: 0.05
+#     
+#     # Pas de take profit (laisser courir)
+#     use_take_profit: false
+#   
+#   position_sizing:
+#     enabled: true
+#     method: "volatility_based"
+#     volatility_based:
+#       risk_pct: 0.02  # Risquer 2% par trade
+#       atr_period: 14
+#       atr_multiplier: 2.0
+
+# --- Exemple 3: Configuration Technique ---
+# Stop/TP basés sur support/résistance
+#
+# backtest:
+#   strategy: "SimpleMaManagedStrategy"
+#   strategy_params:
+#     fast_period: 10
+#     slow_period: 30
+#     
+#     # Stop Loss au niveau de support
+#     use_stop_loss: true
+#     stop_loss_type: "support_resistance"
+#     stop_loss_lookback: 20
+#     
+#     # Take Profit au niveau de résistance
+#     use_take_profit: true
+#     take_profit_type: "support_resistance"
+#     take_profit_lookback: 20
+#   
+#   position_sizing:
+#     enabled: true
+#     method: "fixed_fractional"
+#     fixed_fractional:
+#       risk_pct: 0.02
+#       stop_distance: 0.03
+
+# --- Exemple 4: Désactiver le Risk Management ---
+# Pour tester une stratégie sans SL/TP
+#
+# backtest:
+#   strategy: "MaCrossover"  # Stratégie classique (pas ManagedStrategy)
+#   strategy_params:
+#     fast_period: 10
+#     slow_period: 30
+#   
+#   position_sizing:
+#     enabled: false  # Pas de position sizing non plus

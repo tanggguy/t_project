@@ -20,8 +20,8 @@ class BacktestEngine:
     Classe de gestion du moteur de backtest (Cerebro).
 
     Cette classe encapsule la configuration de Backtrader (Cerebro),
-    le chargement des données, l'ajout de stratégies et l'exécution
-    du backtest.
+    le chargement des données, l'ajout de stratégies, l'ajout de sizers
+    et l'exécution du backtest.
     """
 
     def __init__(self) -> None:
@@ -139,6 +139,31 @@ class BacktestEngine:
         params_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
         logger.info(
             f"Stratégie '{strategy_class.__name__}' ajoutée. "
+            f"Paramètres: ({params_str})"
+        )
+
+    def add_sizer(self, sizer_class: Type[bt.Sizer], **kwargs: Any) -> None:
+        """
+        Ajoute un sizer (gestionnaire de taille de position) à Cerebro.
+
+        Le sizer contrôle la taille des positions pour chaque ordre.
+        Un seul sizer peut être actif à la fois.
+
+        Args:
+            sizer_class (Type[bt.Sizer]): La classe du sizer à utiliser
+                                          (ex: FixedSizer, VolatilityBasedSizer).
+            **kwargs: Les paramètres à passer au sizer
+                      (ex: stake=10, pct_size=0.95).
+
+        Example:
+            >>> from position_sizing.sizers import FixedSizer
+            >>> engine = BacktestEngine()
+            >>> engine.add_sizer(FixedSizer, pct_size=0.50)  # Investir 50% du capital
+        """
+        self.cerebro.addsizer(sizer_class, **kwargs)
+        params_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
+        logger.info(
+            f"Position Sizer '{sizer_class.__name__}' ajouté. "
             f"Paramètres: ({params_str})"
         )
 
