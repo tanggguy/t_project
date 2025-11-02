@@ -161,26 +161,26 @@ TODO COMPLET - Projet Trading Python
 
 
 
-💰 Phase 5 : Risk Management (Semaine 4-5)
-5.1 Stop Loss et Take Profit
+    💰 Phase 5 : Risk Management (Semaine 4-5)
+    5.1 Stop Loss et Take Profit
 
- Créer risk_management/stop_loss.py :
+    Créer risk_management/stop_loss.py :
 
- Fixed stop loss (%)
- Trailing stop loss
- ATR-based stop loss
- Support/Resistance stops
+    Fixed stop loss (%)
+    Trailing stop loss
+    ATR-based stop loss
+    Support/Resistance stops
 
-Créer risk_management/take_profit.py
+    Créer risk_management/take_profit.py
 
-5.2 Position Sizing
+    5.2 Position Sizing
 
- Créer risk_management/position_sizing.py :
+    Créer risk_management/position_sizing.py :
 
- Fixed fractional (risquer X% par trade)
- Kelly Criterion
- Volatility-based sizing
- Maximum positions simultanées
+    Fixed fractional (risquer X% par trade)
+    
+    Volatility-based sizing
+ 
 
 
 

@@ -10,7 +10,7 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 * **Langage :** Python (3.13)
 * **Stack Technique Principale :**
     * **Données :** `yfinance`
-    * **Analyse / Indicateurs :** `pandas` et `pandas-ta`
+    * **Analyse / Indicateurs :** `pandas` 
     * **Moteur de Backtest :** `backtrader`
     * **Optimisation :** `optuna`
 
@@ -34,7 +34,7 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 * **Style :** Suivre la convention **PEP 8** (noms de variables en `snake_case`, noms de classes en `PascalCase`).
 * **Imports :** Organiser les imports en haut du fichier, dans cet ordre :
     1.  Bibliothèques natives (ex: `import os`)
-    2.  Bibliothèques tierces (ex: `import backtrader as bt`, `import pandas as pd`)
+    2.  Bibliothèques tierces (ex: `import backtrader as bt`, ``)
     3.  Imports locaux de notre projet (ex: `from utils.data_manager import DataManager`)
 
 ### 3.2. "Type Hinting" (Annotations de type)
@@ -49,7 +49,6 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 
     # Bon
     from typing import Optional
-    import pandas as pd
 
     def get_data(ticker: str, start_date: Optional[str] = None) -> pd.DataFrame:
         # ...
@@ -95,9 +94,6 @@ Toute assistance IA (Copilot, Gemini, etc.) doit s'efforcer de suivre ces princi
 * **Indicateurs (si définis dans Backtrader) :**
     * Définir dans `__init__` (ex: `self.rsi = bt.indicators.RSI(...)`).
     * Utiliser dans `next` (ex: `if self.rsi[0] < 30:`).
-* **Indicateurs (via `pandas-ta`) :**
-    * Les indicateurs pré-calculés sont des "lignes" de données.
-    * Accès : `self.data.RSI_14[0]`, `self.data.MACDh_12_26_9[0]`.
 
 ### 4.3. `optuna`
 * **Fonction Objectif :** La fonction à optimiser doit s'appeler `objective` et prendre `trial: optuna.Trial` en argument.
