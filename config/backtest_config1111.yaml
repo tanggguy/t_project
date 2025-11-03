@@ -58,7 +58,7 @@ backtest:
     # period: "1d"              # Format yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
     # Ou utiliser start_date et end_date à la place de period:
     start_date: "2020-01-01"
-    end_date: "2025-11-01"
+    end_date: "2025-11-03"
   
   # Configuration du broker
   broker:

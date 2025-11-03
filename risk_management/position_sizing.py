@@ -157,7 +157,7 @@ class VolatilityBasedSizer(bt.Sizer):
                 return 0
             self.atr = bt.indicators.ATR(self.strategy.data, period=self.p.atr_period)
 
-        if len(self.atr) == 0:
+        if len(self.atr) < self.p.atr_period:
             logger.debug(
                 "VolatilityBasedSizer: ATR pas encore prêt (période de warmup)"
             )

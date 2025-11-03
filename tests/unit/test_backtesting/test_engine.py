@@ -183,3 +183,63 @@ class TestBacktestEngine:
             # without more complex setup. We just check that cerebro.plot is NOT called.
             engine_instance.plot()
             engine_instance.cerebro.plot.assert_not_called()
+
+    # --- Tests for add_resampled_data ---
+    def test_add_resampled_data_invalid_index(self, engine_instance):
+        """Raises ValueError when DataFrame index is not DatetimeIndex."""
+        df_invalid = pd.DataFrame({"close": [1, 2, 3]})
+
+        with patch("backtesting.engine.resample_data") as mock_resample:
+            with pytest.raises(
+                ValueError,
+                match="L'index du DataFrame doit être de type DatetimeIndex",
+            ):
+                engine_instance.add_resampled_data(
+                    df_invalid, rule="1W", name="resampled_weekly"
+                )
+            mock_resample.assert_not_called()
+
+    def test_add_resampled_data_empty_result(self, engine_instance, sample_dataframe):
+        """Does not call add_data when resampling returns an empty DataFrame."""
+        empty_resampled = pd.DataFrame(
+            columns=["open", "high", "low", "close", "volume"],
+            index=pd.DatetimeIndex([]),
+        )
+
+        with patch("backtesting.engine.resample_data", return_value=empty_resampled):
+            with patch.object(engine_instance, "add_data") as mock_add_data:
+                engine_instance.add_resampled_data(
+                    sample_dataframe, rule="1W", name="resampled_weekly"
+                )
+                mock_add_data.assert_not_called()
+
+    def test_add_resampled_data_none_result(self, engine_instance, sample_dataframe):
+        """Does not call add_data when resampling returns None."""
+        with patch("backtesting.engine.resample_data", return_value=None):
+            with patch.object(engine_instance, "add_data") as mock_add_data:
+                engine_instance.add_resampled_data(
+                    sample_dataframe, rule="1W", name="resampled_weekly"
+                )
+                mock_add_data.assert_not_called()
+
+    def test_add_resampled_data_success(self, engine_instance, sample_dataframe):
+        """Calls add_data with the resampled DataFrame and provided name."""
+        # Create a simple non-empty resampled DataFrame
+        resampled_index = pd.date_range("2023-01-01", periods=2, freq="1W")
+        df_resampled = pd.DataFrame(
+            {
+                "open": [100.0, 101.0],
+                "high": [105.0, 106.0],
+                "low": [95.0, 96.0],
+                "close": [102.0, 103.0],
+                "volume": [1000, 1100],
+            },
+            index=resampled_index,
+        )
+
+        with patch("backtesting.engine.resample_data", return_value=df_resampled):
+            with patch.object(engine_instance, "add_data") as mock_add_data:
+                engine_instance.add_resampled_data(
+                    sample_dataframe, rule="1W", name="resampled_weekly"
+                )
+                mock_add_data.assert_called_once_with(df_resampled, name="resampled_weekly")

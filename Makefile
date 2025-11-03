@@ -31,9 +31,19 @@ python scripts/run_backtest.py --config config/backtest_config1111.yaml
 
 pytest --cov=nom_du_module tests/
 pytest --cov=utils tests/
-pytest --cov=utils --cov-report=term-missing tests/
+pytest --cov=optimization --cov-report=term-missing tests/
 
 
 mut.py --target utils --unit-test tests --runner pytest
 
 
+
+Lancer une optimisation : 
+python scripts/run_optimization.py --config config/optimization_SimpleMaManaged.yaml 
+--n-trials 20 --no-progress-bar
+
+python scripts/run_optimization.py --config config/optimization_RsiMeanReversionManaged.yaml 
+
+
+
+optuna-dashboard sqlite:///results/optimization/optuna_studies.db --host 127.0.0.1 --port 4200

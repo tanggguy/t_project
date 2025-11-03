@@ -34,7 +34,7 @@ backtest:
     
     # --- Take Profit Configuration ---
     use_take_profit: true
-    take_profit_type: "fixed"  # "fixed", "atr", "support_resistance"
+    take_profit_type: "atr"  # "fixed", "atr", "support_resistance"
     
     # Paramètres pour take_profit_type="fixed"
     take_profit_pct: 0.04  # 4% de gain visé
@@ -53,7 +53,7 @@ backtest:
   # ========================================
   position_sizing:
     enabled: true
-    method: "volatility_based"  # "fixed", "fixed_fractional", "volatility_based"
+    method: "fixed"  # "fixed", "fixed_fractional", "volatility_based"
     
     # --- Paramètres pour méthode "fixed" ---
     # Investit un montant fixe ou un pourcentage fixe
@@ -84,7 +84,7 @@ backtest:
     # period: "2y"  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
     
     # Option 2: Dates absolues
-    start_date: "2020-01-01"
+    start_date: "2024-01-01"
     end_date: "2025-11-01"
   
   # ========================================

@@ -12,15 +12,15 @@ project:
 
 
 logging:
-  log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: WARNING  # DEBUG, INFO, WARNING, ERROR, CRITICAL
   file: logs/trading_project.log
   max_bytes: 5242880  # 5 MB
   backup_count: 5
 # --- Paramètres du Data Manager (utils/data_manager.py) ---
 data:
     # Périodes par défaut si non spécifiées lors du téléchargement
-    default_start_date: "2020-01-01"
-    default_end_date: "2025-10-31"
+    default_start_date: "2015-01-01"
+    default_end_date: "2025-11-03"
     
     # Répertoire de cache (tel que défini dans README.md et .gitignore)
     cache_dir: "data/cache/"
@@ -48,3 +48,6 @@ broker:
 
     # Paramètre de slippage (ex: 0.0005 pour 0.05%)
     slippage_pct: 0.0005
+
+optimization: 
+    log_level: ERROR  # Niveau de log spécifique pour l'optimisation

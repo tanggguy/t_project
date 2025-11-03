@@ -184,44 +184,44 @@ TODO COMPLET - Projet Trading Python
 
 
 
-5.3 Intégration
+    5.3 Intégration
 
- Modifier base_strategy.py pour intégrer risk management
- Ajouter paramètres de risque dans configs
- Tests avec différents profils de risque
-
-🔧 Phase 6 : Optimisation Basique (Semaine 5-6)
-6.1 Setup Optuna
-
- Créer optimization/optuna_optimizer.py :
-
- Classe OptunaOptimizer
- Définition de l'espace de recherche
- Fonction objectif (maximize Sharpe ratio)
- Sauvegarde des études
+    Modifier base_strategy.py pour intégrer risk management
+    Ajouter paramètres de risque dans configs
 
 
+    🔧 Phase 6 : Optimisation Basique (Semaine 5-6)
+    6.1 Setup Optuna
 
-6.2 Parameter Spaces
+    Créer optimization/optuna_optimizer.py :
 
- Créer optimization/parameter_spaces.py :
-
- Espaces pour MA Crossover
- Espaces pour RSI strategy
- Contraintes et dépendances
+    Classe OptunaOptimizer
+    Définition de l'espace de recherche
+    Fonction objectif (maximize Sharpe ratio)
+    Sauvegarde des études
 
 
 
-6.3 Première optimisation
+    6.2 Parameter Spaces
 
- Script scripts/run_optimization.py :
+    Créer optimization/parameter_spaces.py :
 
- Optimiser MA Crossover sur données historiques
- 100 trials minimum
- Sauvegarder meilleurs paramètres
+    Espaces pour MA Crossover
+    Espaces pour RSI strategy
+    Contraintes et dépendances
 
 
- Visualisation des résultats Optuna
+
+    6.3 Première optimisation
+
+    Script scripts/run_optimization.py :
+
+    Optimiser MA Crossover sur données historiques
+    100 trials minimum
+    Sauvegarder meilleurs paramètres
+
+
+    Visualisation des résultats Optuna
 
 📊 Phase 7 : Métriques et Analyse (Semaine 6-7)
 7.1 Analyzers avancés

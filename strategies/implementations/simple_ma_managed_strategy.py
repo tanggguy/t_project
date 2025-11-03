@@ -68,9 +68,15 @@ class SimpleMaManagedStrategy(ManagedStrategy):
         Le risk management (SL/TP) est géré automatiquement par ManagedStrategy.
         Cette méthode se concentre uniquement sur les signaux d'entrée.
         """
-        # Éviter d'entrer si on attend que l'ATR soit prêt
-        # if self.atr and len(self.atr) < self.p.atr_period:
-        #     return
+        # Warmup pour les SMA
+        min_period = max(self.p.fast_period, self.p.slow_period)
+
+        # Si l'ATR existe, l'attendre aussi
+        if self.atr is not None:
+            min_period = max(min_period, self.p.atr_period)
+
+        if len(self) < min_period:
+            return
 
         # Signal d'achat : Golden Cross
         if self.crossover[0] > 0:

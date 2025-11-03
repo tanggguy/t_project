@@ -442,16 +442,13 @@ def main() -> None:
     # --- Chargement des données ---
     data_config = bt_config.get("data", {})
     ticker = data_config.get("ticker", "AAPL")
-    period = data_config.get("period")
     start_date = data_config.get("start_date")
     end_date = data_config.get("end_date")
 
     logger.info(f"Chargement des données pour {ticker}...")
     data_manager = DataManager()
 
-    if period:
-        df = data_manager.get_data(ticker=ticker, period=period)
-    elif start_date and end_date:
+    if start_date and end_date:
         df = data_manager.get_data(
             ticker=ticker, start_date=start_date, end_date=end_date
         )

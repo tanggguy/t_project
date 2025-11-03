@@ -10,6 +10,7 @@ import pandas as pd
 from utils.logger import setup_logger
 from utils.config_loader import get_settings
 from strategies.base_strategy import BaseStrategy  # Pour le type hinting
+from utils.data_processor import resample_data
 
 # Initialisation du logger pour ce module
 logger = setup_logger(__name__)
@@ -35,6 +36,7 @@ class BacktestEngine:
             settings: Dict[str, Any] = get_settings()
             self.backtest_config: Dict[str, Any] = settings.get("backtest", {})
             self.broker_config: Dict[str, Any] = settings.get("broker", {})
+
             logger.debug("Configuration settings.yaml chargée.")
         except Exception as e:
             logger.error(f"Erreur fatale lors du chargement de la configuration: {e}")
@@ -124,6 +126,31 @@ class BacktestEngine:
             f"Flux de données '{name}' ajouté. "
             f"Période: {df.index.min().date()} à {df.index.max().date()}."
         )
+
+    def add_resampled_data(self, df: pd.DataFrame, rule: str, name: str) -> None:
+        """
+        Re-échantillonne un DataFrame OHLCV via utils.data_processor.resample_data
+        puis l'ajoute comme flux de données Backtrader.
+
+        Args:
+            df (pd.DataFrame): DataFrame source (index DatetimeIndex)
+            rule (str): Règle pandas (ex: '4H', '1D', '1W')
+            name (str): Nom du flux ajouté dans Cerebro
+        """
+        if not isinstance(df.index, pd.DatetimeIndex):
+            logger.error(
+                "Le DataFrame n'a pas de DatetimeIndex. Resampling impossible."
+            )
+            raise ValueError("L'index du DataFrame doit être de type DatetimeIndex")
+
+        df_resampled = resample_data(df, rule=rule)
+        if df_resampled is None or df_resampled.empty:
+            logger.error(
+                f"Resampling '{rule}' a retourné un DataFrame vide pour '{name}'."
+            )
+            return
+        self.add_data(df_resampled, name=name)
+        logger.info(f"Flux re-échantillonné '{name}' ajouté (rule={rule}).")
 
     def add_strategy(self, strategy_class: Type[BaseStrategy], **kwargs: Any) -> None:
         """

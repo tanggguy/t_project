@@ -340,7 +340,6 @@ Phase 5.2 : **Take Profit**
 
 Phase 5.3 : **Position Sizing**
 - Fixed Position Size
-- Kelly Criterion
 - Volatility-based Sizing
 
 ---

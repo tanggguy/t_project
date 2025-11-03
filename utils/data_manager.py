@@ -225,6 +225,22 @@ class DataManager:
         )
 
         try:
+            # Clamp intraday range to last ~729 days (Yahoo limit)
+            if isinstance(interval, str) and (
+                interval.endswith("h") or interval.endswith("m")
+            ):
+                try:
+                    pd_end = pd.Timestamp(end_date, tz=self.timezone)
+                    pd_start = pd.Timestamp(start_date, tz=self.timezone)
+                    min_start = pd_end - pd.Timedelta(days=728)
+                    if pd_start < min_start:
+                        logger.info(
+                            f"Plage intraday trop longue pour Yahoo ({start_date} -> {end_date}). Clamp start -> {min_start.date()}."
+                        )
+                        start_date = min_start.strftime("%Y-%m-%d")
+                except Exception as e:
+                    logger.warning(f"Clamp intraday ignore: {e}")
+
             ticker_obj = yf.Ticker(ticker)
             df = ticker_obj.history(
                 start=start_date,

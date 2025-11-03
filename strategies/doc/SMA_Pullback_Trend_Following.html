@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infographie: Stratégie 01 - Suivi de Tendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+
+        .chart-container-sm {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 150px;
+            max-height: 25vh;
+        }
+
+        .flow-step {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .flow-arrow {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #007BFF;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .flow-step {
+                text-align: left;
+                align-items: flex-start;
+            }
+
+            .flow-arrow {
+                position: absolute;
+                left: 50%;
+                top: 100%;
+                transform: translateX(-50%) translateY(-0.5rem);
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            .flow-step:not(:last-child) {
+                padding-bottom: 2.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-12">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl lg:text-5xl font-extrabold text-[#004AAD] mb-2">Stratégie 01: Suivi de Tendance</h1>
+            <p class="text-lg lg:text-xl font-semibold text-[#007BFF]">Mix Optimal v1 (Swing Trading)</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-lg p-6 lg:p-8 flex items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-[#004AAD] mb-3">L'Hypothèse de la Stratégie</h2>
+                    <p class="text-base lg:text-lg">
+                        L'opportunité d'achat optimale n'est pas lors du premier signal de tendance, qui est souvent
+                        volatil. Elle se trouve lors du
+                        premier <strong class="text-[#007BFF]">repli "sain" (pullback)</strong>,
+                        une fois que la tendance de fond et le momentum sont tous deux confirmés.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-[#004AAD] text-white rounded-lg shadow-lg p-6 lg:p-8">
+                <h2 class="text-2xl font-bold mb-4 text-center">Paramètres Clés</h2>
+                <div class="flex justify-around items-center text-center">
+                    <div>
+                        <span class="block text-4xl font-extrabold">1D / 4H</span>
+                        <span class="block text-sm opacity-90">Unité de Temps</span>
+                    </div>
+                    <div class="border-l border-white/30 h-16"></div>
+                    <div>
+                        <span class="block text-4xl font-extrabold">Indices</span>
+                        <span class="block text-sm opacity-90">Actifs Ciblés</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-white rounded-lg shadow-lg p-6 lg:p-8">
+                <h2 class="text-2xl font-bold text-[#004AAD] mb-6 text-center lg:text-left">Boîte à Outils: Les
+                    Indicateurs Requis</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                    <div class="border-l-4 border-[#004AAD] p-4 bg-gray-50 rounded-r-lg">
+                        <h3 class="text-lg font-bold text-[#004AAD]">SMA Lente (200)</h3>
+                        <p class="text-sm"><strong>Rôle:</strong> Filtre de régime long terme. Définit la tendance de
+                            fond ("l'océan").</p>
+                    </div>
+
+                    <div class="border-l-4 border-[#007BFF] p-4 bg-gray-50 rounded-r-lg">
+                        <h3 class="text-lg font-bold text-[#007BFF]">SMA Rapide (50)</h3>
+                        <p class="text-sm"><strong>Rôle:</strong> Support dynamique. Définit la tendance moyen terme
+                            ("la vague").</p>
+                    </div>
+
+                    <div class="border-l-4 border-[#58AFFF] p-4 bg-gray-50 rounded-r-lg">
+                        <h3 class="text-lg font-bold text-[#58AFFF]">RSI (14)</h3>
+                        <p class="text-sm"><strong>Rôle:</strong> Filtre de momentum. Confirme la force haussière (doit
+                            être > 50).</p>
+                    </div>
+
+                    <div class="border-l-4 border-[#A0D2FF] p-4 bg-gray-50 rounded-r-lg">
+                        <h3 class="text-lg font-bold text-[#A0D2FF]">ATR (14)</h3>
+                        <p class="text-sm"><strong>Rôle:</strong> Mesure de volatilité. Utilisé pour placer le Stop-Loss
+                            initial.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-white rounded-lg shadow-lg p-6 lg:p-8">
+                <h2 class="text-2xl font-bold text-[#004AAD] mb-4">Visualisation de la Stratégie</h2>
+                <p class="text-sm text-gray-600 mb-4">
+                    Le graphique ci-dessous simule la stratégie. L'entrée (&#9679;) se produit lorsque le Prix (noir)
+                    rebondit sur la SMA 50 (bleu clair) pendant que la tendance est haussière (SMA 50 > SMA 200) et que
+                    le RSI est fort. La sortie (&#9679;) se produit lors du "Death Cross".
+                </p>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+                <div class="chart-container-sm mt-6">
+                    <canvas id="rsiChart"></canvas>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 row-span-2 bg-white rounded-lg shadow-lg p-6 lg:p-8">
+                <h2 class="text-2xl font-bold text-[#004AAD] mb-6">Logique d'Entrée: Le Flux</h2>
+                <div class="flex flex-col space-y-4 lg:space-y-0 relative">
+
+                    <div class="flow-step">
+                        <span
+                            class="flex items-center justify-center w-10 h-10 bg-[#007BFF] text-white font-bold text-xl rounded-full mb-2">1</span>
+                        <h3 class="text-lg font-semibold text-[#004AAD]">Régime</h3>
+                        <p class="text-sm">La <code class="bg-gray-200 px-1 rounded">SMA 50</code> est > <code
+                                class="bg-gray-200 px-1 rounded">SMA 200</code> ?</p>
+                        <div class="flow-arrow hidden lg:block">&darr;</div>
+                    </div>
+                    <div class="flex justify-center lg:hidden"><span class="flow-arrow">&darr;</span></div>
+
+                    <div class="flow-step">
+                        <span
+                            class="flex items-center justify-center w-10 h-10 bg-[#007BFF] text-white font-bold text-xl rounded-full mb-2">2</span>
+                        <h3 class="text-lg font-semibold text-[#004AAD]">Momentum</h3>
+                        <p class="text-sm">Le <code class="bg-gray-200 px-1 rounded">RSI (14)</code> est > 50 ?</p>
+                        <div class="flow-arrow hidden lg:block">&darr;</div>
+                    </div>
+                    <div class="flex justify-center lg:hidden"><span class="flow-arrow">&darr;</span></div>
+
+                    <div class="flow-step">
+                        <span
+                            class="flex items-center justify-center w-10 h-10 bg-[#007BFF] text-white font-bold text-xl rounded-full mb-2">3</span>
+                        <h3 class="text-lg font-semibold text-[#004AAD]">Pullback</h3>
+                        <p class="text-sm">Le <code class="bg-gray-200 px-1 rounded">Prix [i-1]</code> a clôturé < <code
+                                class="bg-gray-200 px-1 rounded">SMA 50</code> ?</p>
+                        <div class="flow-arrow hidden lg:block">&darr;</div>
+                    </div>
+                    <div class="flex justify-center lg:hidden"><span class="flow-arrow">&darr;</span></div>
+
+                    <div class="flow-step">
+                        <span
+                            class="flex items-center justify-center w-10 h-10 bg-[#007BFF] text-white font-bold text-xl rounded-full mb-2">4</span>
+                        <h3 class="text-lg font-semibold text-[#004AAD]">Reprise</h3>
+                        <p class="text-sm">Le <code class="bg-gray-200 px-1 rounded">Prix [i]</code> clôture > <code
+                                class="bg-gray-200 px-1 rounded">SMA 50</code> ?</p>
+                        <div class="flow-arrow hidden lg:block">&darr;</div>
+                    </div>
+                    <div class="flex justify-center lg:hidden"><span class="flow-arrow">&darr;</span></div>
+
+                    <div class="flow-step text-center">
+                        <div class="p-4 bg-green-100 border-l-4 border-green-500 rounded-r-lg w-full">
+                            <h3 class="text-lg font-bold text-green-700">SIGNAL D'ACHAT</h3>
+                            <p class="text-sm text-green-600">Acheter à l'ouverture de la bougie [i+1]</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold text-[#004AAD] mt-10 mb-6">Logique de Sortie</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                        <h3 class="text-lg font-bold text-red-700">1. Stop-Loss (Urgence)</h3>
+                        <p class="text-sm text-red-600">Vente si le Prix <br> <code
+                                class="bg-red-100 px-1 rounded">Prix Entrée - (2 * ATR)</code></code< /p>
+                    </div>
+                    <div class="p-4 bg-blue-50 border-l-4 border-[#007BFF] rounded-r-lg">
+                        <h3 class="text-lg font-bold text-blue-700">2. Fin de Tendance (Normal)</h3>
+                        <p class="text-sm text-blue-600">Vente si "Death Cross" <br> <code
+                                class="bg-blue-100 px-1 rounded">SMA 50 < SMA 200</code></code< /p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-white rounded-lg shadow-lg p-6 lg:p-8">
+                <h2 class="text-2xl font-bold text-[#004AAD] mb-4">Gestion du Risque Fondamentale</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <div class="md:col-span-1 text-center">
+                        <span class="text-8xl font-extrabold text-[#007BFF]">1%</span>
+                        <span class="block text-xl font-semibold text-[#004AAD]">Risque Max par Trade</span>
+                    </div>
+                    <div class="md:col-span-2 p-4 bg-gray-100 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-700">Calcul de la Taille de Position</h3>
+                        <code
+                            class="block text-sm md:text-base text-gray-800 bg-gray-200 p-3 rounded mt-2 overflow-x-auto">
+                            Taille = (Capital * 0.01) / (Prix_Entrée - Prix_SL)
+                        </code>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function wrapLabel(str) {
+            const maxLength = 16;
+            if (str.length <= maxLength) {
+                return str;
+            }
+            const words = str.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLength) {
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
+                    currentLine = word;
+                } else {
+                    currentLine = (currentLine + ' ' + word).trim();
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            return lines.length > 0 ? lines : [str];
+        }
+
+        const tooltipCallbacks = {
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function (tooltipItems) {
+                            const item = tooltipItems[0];
+                            let label = item.chart.data.labels[item.dataIndex];
+                            if (Array.isArray(label)) {
+                                return label.join(' ');
+                            } else {
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        const chartLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+        const ctxPrice = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(ctxPrice, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Prix',
+                        data: [42, 56, 62, 64, 72, 74, 70, 80, 86, 92, 84, 68],
+                        borderColor: '#333333',
+                        backgroundColor: '#333333',
+                        borderWidth: 3,
+                        tension: 0.1,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'SMA 50',
+                        data: [45, 55, 60, 65, 70, 75, 72, 78, 85, 90, 85, 70],
+                        borderColor: '#007BFF',
+                        backgroundColor: '#007BFF',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0.1,
+                    },
+                    {
+                        label: 'SMA 200',
+                        data: [50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72],
+                        borderColor: '#004AAD',
+                        backgroundColor: '#004AAD',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.1,
+                    },
+                    {
+                        label: 'Signal Entrée',
+                        data: [null, null, null, null, null, null, null, 80, null, null, null, null],
+                        type: 'scatter',
+                        pointStyle: 'circle',
+                        radius: 8,
+                        backgroundColor: 'rgba(0, 200, 83, 0.9)',
+                    },
+                    {
+                        label: 'Signal Sortie',
+                        data: [null, null, null, null, null, null, null, null, null, null, null, 68],
+                        type: 'scatter',
+                        pointStyle: 'circle',
+                        radius: 8,
+                        backgroundColor: 'rgba(211, 47, 47, 0.9)',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: false }
+                },
+                ...tooltipCallbacks
+            }
+        });
+
+        const ctxRsi = document.getElementById('rsiChart').getContext('2d');
+        const rsiChart = new Chart(ctxRsi, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'RSI (14)',
+                        data: [30, 60, 65, 68, 72, 75, 60, 65, 70, 75, 60, 40],
+                        borderColor: '#58AFFF',
+                        backgroundColor: 'rgba(88, 175, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                    },
+                    {
+                        label: 'Niveau 50',
+                        data: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
+                        borderColor: '#333333',
+                        backgroundColor: '#333333',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 0,
+                        max: 100
+                    }
+                },
+                ...tooltipCallbacks
+            }
+        });
+    </script>
+
+</body>
+
+</html>

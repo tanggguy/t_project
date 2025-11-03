@@ -1,0 +1,97 @@
+optimization:
+  strategy:
+    name: "RsiMeanReversionManaged"
+    module: "strategies.implementations.rsi_mean_reversion_managed_strategy"
+    class_name: "RsiMeanReversionManagedStrategy"
+    fixed_params:
+      use_stop_loss: true
+      stop_loss_type: "atr"
+      use_take_profit: true
+      take_profit_type: "atr"
+    param_space:
+      # -- Paramètres de logique RSI / Bollinger --
+      trend_long_period: [100, 300, 10]
+      avoid_strong_trend:
+        type: "categorical"
+        choices: [true, false]
+      rsi_period: [8, 30, 2]
+      rsi_oversold: [20, 40, 5]
+      rsi_exit: [45, 60, 5]
+      bb_period: [10, 30, 5]
+      bb_dev:
+        type: "float"
+        low: 1.5
+        high: 3.0
+        step: 0.25
+      use_invalidation:
+        type: "categorical"
+        choices: [true, false]
+      reentry_cooldown_bars: [0, 10, 1]
+      atr_period: [10, 30, 2]
+
+      # -- Paramètres de risk management optimisables --
+      stop_loss_atr_mult:
+        type: "float"
+        low: 1.5
+        high: 4.0
+        step: 0.5
+      take_profit_atr_mult:
+        type: "float"
+        low: 2.0
+        high: 5.0
+        step: 0.5
+      # stop_loss_type:
+      #   type: "categorical"
+      #   choices: ["fixed", "atr", "trailing", "support_resistance"]
+      # take_profit_type:
+      #   type: "categorical"
+      #   choices: ["fixed", "atr", "support_resistance"]
+
+  data:
+    ticker: "AAPL"
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"
+    use_cache: true
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001
+    slippage_pct: 0.0
+
+  position_sizing:
+    enabled: false
+    method: "fixed"
+    fixed:
+      pct_size: 0.5
+
+  objective:
+    metric: "sharpe"
+    penalize_no_trades: -1.0
+    min_trades: 1
+    enforce_fast_slow_gap: false  # non pertinent pour RSI
+
+  study:
+    study_name: "rsi_mean_rev_managed_opt"
+    direction: "maximize"
+    storage: "sqlite:///results/optimization/optuna_studies.db"
+    load_if_exists: true
+    sampler: "tpe"
+    sampler_kwargs:
+      seed: 42
+    pruner: "median"
+    pruner_kwargs: {}
+    n_trials: 30
+    timeout: null
+    n_jobs: -1
+    show_progress_bar: true
+
+  output:
+    save_study: true
+    study_path: "results/optimization/rsi_mean_rev_managed_opt.pkl"
+    save_trials_csv: true
+    trials_csv_path: "results/optimization/rsi_mean_rev_managed_opt_trials.csv"
+    log_file: "logs/optimization/optuna_optimizer.log"
+    dump_best_params: true
+    best_params_path: "results/optimization/rsi_mean_rev_managed_opt_best_params.yaml"
+
