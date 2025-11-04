@@ -4,13 +4,18 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from typing import Optional
+from typing import Optional, Dict
 
 # --- 2. Bibliothèques tierces ---
 import coloredlogs
 
 # --- 3. Imports locaux du projet ---
 # Import tardif pour éviter dépendance circulaire
+
+
+# Handlers de fichiers partagés par chemin absolu pour éviter
+# d'ouvrir plusieurs fois le même fichier sur Windows (verrouillage).
+_FILE_HANDLERS: Dict[str, RotatingFileHandler] = {}
 
 
 def setup_logger(
@@ -62,6 +67,8 @@ def setup_logger(
         backup_count = 5
 
     # Create logs directory if it doesn't exist
+    # Utiliser un chemin absolu pour uniformiser la clé de partage
+    log_file = os.path.abspath(log_file)
     log_dir = os.path.dirname(log_file)
     if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -79,9 +86,18 @@ def setup_logger(
     file_formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    file_handler = RotatingFileHandler(
-        log_file, maxBytes=max_bytes, backupCount=backup_count
-    )
+    # Réutiliser un unique handler par fichier pour éviter
+    # les conflits de rotation sur Windows (WinError 32)
+    file_handler = _FILE_HANDLERS.get(log_file)
+    if file_handler is None:
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=int(max_bytes),
+            backupCount=int(backup_count),
+            encoding="utf-8",
+            delay=True,  # n'ouvre le fichier qu'au premier emit
+        )
+        _FILE_HANDLERS[log_file] = file_handler
     file_handler.setFormatter(file_formatter)
     file_handler.setLevel(logging.DEBUG)
     logger.addHandler(file_handler)

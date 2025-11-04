@@ -190,3 +190,42 @@ Cela offre l’historique des optimisations, l’importance des paramètres, les
 4. Centraliser l’analyse des résultats (notebooks ou scripts dédiés).
 
 Bonnes optimisations !
+
+---
+
+## 9. Prévention de l'overfitting
+
+Un module dédié `optimization/overfitting_check.py` fournit plusieurs analyses avancées :
+
+- **Walk-forward ancré** avec ré-optimisation Optuna (`OverfittingChecker.walk_forward_analysis`).
+- **Tests out-of-sample** sur fenêtres glissantes ou explicites (`out_of_sample_test`).
+- **Simulation Monte Carlo** (bootstrap par blocs sur retours ou trades) pour estimer la distribution de performance (`monte_carlo_simulation`).
+- **Tests de stabilité locale** des hyperparamètres (`stability_tests`).
+
+Les résultats sont exportés sous `results/overfitting/<run_id>/<timestamp>/` (CSV + mini rapport HTML). Exemple d’utilisation :
+
+```python
+from optimization.overfitting_check import OverfittingChecker
+from strategies.implementations.simple_ma_managed_strategy import SimpleMaManagedStrategy
+
+checker = OverfittingChecker(
+    strategy_class=SimpleMaManagedStrategy,
+    param_space={
+        "fast_period": [5, 20, 1],
+        "slow_period": [30, 120, 5],
+        "take_profit_atr_mult": {"type": "float", "low": 1.5, "high": 4.0, "step": 0.25},
+    },
+    data_config={
+        "ticker": "AAPL",
+        "start_date": "2018-01-01",
+        "end_date": "2024-12-31",
+        "interval": "1d",
+        "use_cache": True,
+    },
+    broker_config={"initial_capital": 20000, "commission_pct": 0.001},
+)
+
+wfa_summary = checker.walk_forward_analysis()
+```
+
+Consultez le dossier de sorties pour les rapports WFA/OOS/Monte Carlo/Stabilité.

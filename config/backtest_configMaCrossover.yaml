@@ -1,0 +1,99 @@
+# Configuration du backtest
+# Ce fichier permet de configurer tous les paramètres d'un backtest
+
+# backtest:
+#   # Nom de la stratégie à utiliser (sans le suffixe "Strategy")
+#   # Exemples: MaCrossover, RsiOversold, MacdMomentum
+#   strategy: "RsiOversold"
+  
+#   # Paramètres spécifiques à la stratégie (optionnel)
+#   # Si non spécifiés, les valeurs par défaut de la stratégie seront utilisées
+#   strategy_params:
+#     rsi_period: 14
+#     oversold_level: 30
+#     overbought_level: 70
+  
+#   # Données à charger
+#   data:
+#     ticker: "TSLA"
+#     # period: "1d"              # Format yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+#     # Ou utiliser start_date et end_date à la place de period:
+#     start_date: "2020-01-01"
+#     end_date: "2025-11-01"
+  
+#   # Configuration du broker
+#   broker:
+#     initial_capital: 10000.0
+#     commission_pct: 0.001     # 0.1% par transaction
+#     slippage_pct: 0.0         # Optionnel
+  
+#   # Options d'affichage et de sortie
+#   output:
+#     plot: true               # Afficher les graphiques
+#     save_results: true        # Sauvegarder les résultats dans un fichier
+#     results_dir: "results/backtests"
+#     verbose: true             # Logs détaillés
+
+# ============================================================================
+# EXEMPLES DE CONFIGURATIONS POUR DIFFÉRENTES STRATÉGIES
+# ============================================================================
+
+# --- Configuration pour MA Crossover ---
+backtest:
+  # Nom de la stratégie à utiliser (sans le suffixe "Strategy")
+  # Exemples: MaCrossover, RsiOversold, MacdMomentum
+  strategy: "MaCrossover"
+  
+  # Paramètres spécifiques à la stratégie (optionnel)
+  # Si non spécifiés, les valeurs par défaut de la stratégie seront utilisées
+  strategy_params:
+    fast_period: 10
+    slow_period: 30
+    stop_pct: 0.02  # 2% de stop loss
+
+
+  # Données à charger
+  data:
+    ticker: "AAPL"
+    # period: "1d"              # Format yfinance: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    # Ou utiliser start_date et end_date à la place de period:
+    start_date: "2020-01-01"
+    end_date: "2025-11-03"
+  
+  # Configuration du broker
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001     # 0.1% par transaction
+    slippage_pct: 0.0         # Optionnel
+  
+  # Options d'affichage et de sortie
+  output:
+    plot: true               # Afficher les graphiques
+    save_results: true        # Sauvegarder les résultats dans un fichier
+    results_dir: "results/backtests"
+    verbose: true             # Logs détaillés
+
+
+# --- Configuration pour MACD Momentum ---
+# backtest:
+#   strategy: "MacdMomentum"
+#   strategy_params:
+#     macd_fast: 12
+#     macd_slow: 26
+#     macd_signal: 9
+#   data:
+#     ticker: "GOOGL"
+#     start_date: "2022-01-01"
+#     end_date: "2024-01-01"
+#   broker:
+#     initial_capital: 20000.0
+#   output:
+#     plot: false
+#     save_results: true
+
+# --- Configuration minimale (utilise tous les défauts) ---
+# backtest:
+#   strategy: "RsiOversold"
+#   data:
+#     ticker: "AAPL"
+#     period: "1y"

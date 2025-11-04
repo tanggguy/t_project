@@ -153,13 +153,10 @@ TODO COMPLET - Projet Trading Python
 
     Trading sur croisements MACD
 
-
  Notebook 02_strategy_development.ipynb :
 
  Tests visuels des indicateurs
  Backtests comparatifs
-
-
 
     💰 Phase 5 : Risk Management (Semaine 4-5)
     5.1 Stop Loss et Take Profit
@@ -223,38 +220,36 @@ TODO COMPLET - Projet Trading Python
 
     Visualisation des résultats Optuna
 
-📊 Phase 7 : Métriques et Analyse (Semaine 6-7)
-7.1 Analyzers avancés
+    📊 Phase 7 : Métriques et Analyse (Semaine 6-7)
+    7.1 Analyzers avancés
 
- Créer backtesting/analyzers/performance.py :
+    Créer backtesting/analyzers/performance.py :
 
- Sharpe, Sortino, Calmar ratios
- Win rate, Profit factor
- Average trade, Best/Worst trade
-
-
-
-7.2 Drawdown analysis
-
- Créer backtesting/analyzers/drawdown.py :
-
- Maximum drawdown
- Durée des drawdowns
- Recovery time
- Underwater curve
+    Sharpe, Sortino, Calmar ratios
+    Win rate, Profit factor
+    Average trade, Best/Worst trade
 
 
 
-7.3 Reporting
+    7.2 Drawdown analysis
 
- Créer reports/report_generator.py :
+    Créer backtesting/analyzers/drawdown.py :
 
- Template HTML pour rapports
- Graphiques performance
- Tableau des trades
- Export PDF
+    Maximum drawdown
+    Durée des drawdowns
+    Recovery time
+    Underwater curve
 
 
+
+    7.3 Reporting
+
+    Créer reports/report_generator.py :
+
+    Template HTML pour rapports
+    Graphiques performance
+    Tableau des trades
+    Export PDF
 
 🎨 Phase 8 : Visualisation (Semaine 7-8)
 8.1 Charts de base
@@ -266,9 +261,9 @@ TODO COMPLET - Projet Trading Python
  Equity curve
  Drawdown chart
 
+ est ce que 8.1 vaut le coup, que apporter en plus du plot natif de backtrader ?
 
-
-8.2 Dashboard
+<!-- 8.2 Dashboard
 
  Créer visualization/dashboard.py :
 
@@ -277,17 +272,13 @@ TODO COMPLET - Projet Trading Python
  Métriques temps réel
  Sélection période analyse
 
-
-
 8.3 Notebook d'analyse
 
  03_backtest_analysis.ipynb :
 
  Analyse détaillée des trades
  Patterns gagnants/perdants
- Analyse par période
-
-
+ Analyse par période -->
 
 🚀 Phase 9 : Optimisation Avancée (Semaine 8-9)
 9.1 Overfitting prevention
@@ -299,8 +290,6 @@ TODO COMPLET - Projet Trading Python
  Monte Carlo simulation
  Stability tests
 
-
-
 9.2 Multi-objective
 
  Modifier optimization/objectives.py :
@@ -308,8 +297,6 @@ TODO COMPLET - Projet Trading Python
  Optimisation multi-objectifs
  Trade-off return/risque
  Contraintes custom
-
-
 
 9.3 Hyperparameter tuning
 
@@ -325,8 +312,6 @@ TODO COMPLET - Projet Trading Python
  Confirmation sur timeframe supérieur
  Entry sur timeframe inférieur
  Synchronisation des signaux
-
-
 
 10.2 Stratégies complexes
 
@@ -370,8 +355,6 @@ TODO COMPLET - Projet Trading Python
  Exécution temps réel
  Monitoring positions
 
-
-
 12.2 Alertes
 
  Système d'alertes (email/telegram)
@@ -393,8 +376,6 @@ TODO COMPLET - Projet Trading Python
  Scanner univers d'actions
  Détection opportunités
  Ranking des signaux
-
-
 
 13.2 Portfolio management
 
