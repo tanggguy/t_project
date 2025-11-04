@@ -84,7 +84,7 @@ backtest:
     # period: "2y"  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
     
     # Option 2: Dates absolues
-    start_date: "2024-01-01"
+    start_date: "2015-01-01"
     end_date: "2025-11-01"
   
   # ========================================
@@ -103,6 +103,12 @@ backtest:
     save_results: true        # Sauvegarder les résultats dans un fichier
     results_dir: "results/backtests"
     verbose: true             # Logs détaillés
+    # Génération de rapport HTML (Jinja2 + Plotly)
+    report:
+      enable: true
+      out_dir: "reports/generated"
+      template: "default.html"
+      include_trades: true
 
 # ========================================
 # EXEMPLES DE CONFIGURATIONS ALTERNATIVES

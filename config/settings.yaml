@@ -51,3 +51,17 @@ broker:
 
 optimization: 
     log_level: ERROR  # Niveau de log spécifique pour l'optimisation
+
+# --- Paramètres d'Analytics & Reporting ---
+analytics:
+    periods_per_year: 252        # Daily data
+    returns: log                 # log returns pour les ratios
+    risk_free_rate: 0.0          # taux sans risque (annuel)
+    mar: 0.0                     # minimum acceptable return (annuel)
+    rolling_window: 63           # fenêtre pour les métriques rolling (≈ 3 mois)
+
+reporting:
+    engine: plotly               # moteur de graphiques
+    export_pdf: false            # PDF optionnel (wkhtmltopdf) ultérieurement
+    locale: fr_FR
+    currency: EUR

@@ -91,7 +91,7 @@ class BacktestEngine:
         # Analyseur Sharpe Ratio
         self.cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
 
-        # Analyseur des Retours
+        # Analyseur des Retours agrégés (annualisés / cumulés)
         self.cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
 
         # Analyseur DrawDown
@@ -99,6 +99,24 @@ class BacktestEngine:
 
         # Analyseur des Trades (pour stats win/loss, etc.)
         self.cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
+
+        # Série de rendements par période (journalière par défaut)
+        try:
+            self.cerebro.addanalyzer(
+                bt.analyzers.TimeReturn,
+                timeframe=bt.TimeFrame.Days,
+                _name="timereturns",
+            )
+        except Exception:
+            logger.warning("Impossible d'ajouter TimeReturn analyzer (Backtrader)")
+
+        # Liste détaillée des trades (analyzer custom si disponible)
+        try:
+            from backtesting.analyzers.performance import TradeListAnalyzer  # type: ignore
+
+            self.cerebro.addanalyzer(TradeListAnalyzer, _name="tradelist")
+        except Exception:
+            logger.debug("TradeListAnalyzer indisponible ou non importable.")
 
     def add_data(self, df: pd.DataFrame, name: str = "data0") -> None:
         """

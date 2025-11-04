@@ -11,6 +11,7 @@ from typing import Dict, Any, Type, Optional
 # --- 2. Bibliothèques tierces ---
 import pandas as pd
 import yaml
+import numpy as np
 
 # --- Configuration du Chemin ---
 try:
@@ -511,6 +512,146 @@ def main() -> None:
     if output_config.get("save_results", False):
         results_dir = output_config.get("results_dir", "results/backtests")
         save_results(results, config, results_dir, df)
+
+    # --- Reporting HTML (via YAML) ---
+    try:
+        report_cfg = output_config.get("report", {})
+        report_enabled = report_cfg.get(
+            "enable", output_config.get("report_enable", False)
+        )
+        if report_enabled:
+            from backtesting.analyzers import drawdown as dd_an
+            from backtesting.analyzers import performance as perf
+            from reports.report_generator import generate_report
+
+            strat = results[0]
+
+            # Série de rendements (TimeReturn)
+            try:
+                rt_dict = strat.analyzers.timereturns.get_analysis()
+                returns = pd.Series(rt_dict)
+                # Assurer ordre chronologique & datetime index
+                try:
+                    returns.index = pd.to_datetime(returns.index)
+                except Exception:
+                    pass
+                returns = returns.sort_index()
+            except Exception:
+                returns = pd.Series(dtype=float)
+
+            # Equity
+            equity = None
+            if not returns.empty:
+                equity = pd.Series(
+                    (1.0 + returns).cumprod() * initial_capital, index=returns.index
+                )
+
+            # Underwater / Drawdown
+            dd_metrics, underwater = (
+                dd_an.analyze(equity)
+                if equity is not None
+                else ({}, pd.Series(dtype=float))
+            )
+
+            # Trade list (custom analyzer si dispo)
+            trades_df = None
+            try:
+                trade_list = strat.analyzers.tradelist.get_analysis()
+                trades_df = pd.DataFrame(trade_list)
+                if not trades_df.empty:
+                    if "entry_dt" in trades_df.columns:
+                        trades_df = trades_df.sort_values(by="entry_dt")
+                    trades_df = trades_df.reset_index(drop=True)
+                    trades_df = trades_df.replace({np.nan: None})
+            except Exception:
+                trades_df = None
+
+            # Paramètres analytics (defaults si absents)
+            from utils.config_loader import get_settings
+
+            settings = get_settings()
+            analytics = settings.get("analytics", {})
+            periods_per_year = analytics.get("periods_per_year", 252)
+            rf = analytics.get("risk_free_rate", 0.0)
+            mar = analytics.get("mar", 0.0)
+            rolling_window = analytics.get("rolling_window", 63)
+
+            # Log-returns pour ratios
+            log_returns = None
+            if not returns.empty:
+                log_returns = np.log1p(returns)
+                log_returns = pd.Series(log_returns, index=returns.index)
+
+            # Performance metrics
+            perf_metrics = perf.compute(
+                equity=equity,
+                returns=log_returns if log_returns is not None else returns,
+                trades=trades_df,
+                periods_per_year=periods_per_year,
+                risk_free_rate_annual=rf,
+                mar_annual=mar,
+            )
+
+            # Combiner avec drawdown pour Calmar
+            max_dd = dd_metrics.get("max_drawdown", 0.0)
+            cagr = perf_metrics.get("cagr", 0.0)
+            calmar = 0.0
+            try:
+                calmar = perf.compute_calmar(cagr, max_dd)
+            except Exception:
+                pass
+        perf_metrics["calmar_ratio"] = calmar
+        perf_metrics["max_drawdown"] = max_dd
+        perf_metrics["ulcer_index"] = dd_metrics.get("ulcer_index", 0.0)
+
+        # Assurer compatibilité Jinja2 (pas d'inf)
+        try:
+            import math as _math
+
+            if _math.isinf(perf_metrics.get("profit_factor", 0.0)):
+                perf_metrics["profit_factor"] = float("nan")
+        except Exception:
+            pass
+
+        final_value = strat.broker.getvalue()
+        pnl_value = final_value - initial_capital
+        pnl_pct_value = (pnl_value / initial_capital) * 100 if initial_capital else 0.0
+        perf_metrics["final_value"] = final_value
+        perf_metrics["pnl"] = pnl_value
+        perf_metrics["pnl_pct"] = pnl_pct_value
+        perf_metrics.setdefault("expectancy", perf_metrics.get("expectancy", 0.0))
+
+        # Meta
+        meta = {
+            "strategy_name": strategy_name,
+            "ticker": ticker,
+            "start_date": df.index.min().date() if not df.empty else None,
+            "end_date": df.index.max().date() if not df.empty else None,
+        }
+
+        out_dir = report_cfg.get("out_dir", "reports/generated")
+        out_file = f"{strategy_name}_{ticker}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.html"
+        out_path = str(Path(out_dir) / out_file)
+        template = report_cfg.get("template", "default.html")
+
+        generate_report(
+            meta=meta,
+            metrics=perf_metrics,
+            equity=equity if equity is not None else pd.Series(dtype=float),
+            underwater=underwater if underwater is not None else pd.Series(dtype=float),
+            trades=trades_df,
+            out_path=out_path,
+            template=template,
+            returns=returns,
+            log_returns=log_returns,
+            analytics_config={
+                "periods_per_year": periods_per_year,
+                "risk_free_rate": rf,
+                "rolling_window": rolling_window,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du rapport HTML: {e}")
 
     # --- Plot ---
     if output_config.get("plot", False):
