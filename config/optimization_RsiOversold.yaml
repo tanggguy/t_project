@@ -1,0 +1,57 @@
+optimization:
+  strategy:
+    name: "RsiOversold"
+    module: "strategies.implementations.rsi_oversold"
+    class_name: "RsiOversoldStrategy"
+    param_space:
+      rsi_period: [10, 20, 2]
+      oversold_level: [35, 50, 5]
+      overbought_level: [55, 80, 5]
+
+  data:
+    ticker: "AAPL"
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"
+    use_cache: true
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001
+    slippage_pct: 0.0
+
+  position_sizing:
+    enabled: false
+    method: "fixed"
+    fixed:
+      pct_size: 0.3
+
+  objective:
+    metric: "sharpe"
+    penalize_no_trades: -10.0
+    min_trades: 1
+    enforce_fast_slow_gap: false
+
+  study:
+    study_name: "rsi_oversold_opt"
+    direction: "maximize"
+    storage: "sqlite:///results/optimization/optuna_studies.db"
+    load_if_exists: true
+    sampler: "tpe"
+    sampler_kwargs:
+      seed: 42
+    pruner: "null"
+    pruner_kwargs: {}
+    n_trials: 50
+    timeout: null
+    n_jobs: -1
+    show_progress_bar: false
+
+  output:
+    save_study: true
+    study_path: "results/optimization/rsi_oversold_opt.pkl"
+    save_trials_csv: true
+    trials_csv_path: "results/optimization/rsi_oversold_opt_trials.csv"
+    log_file: "logs/optimization/optuna_optimizer.log"
+    dump_best_params: true
+    best_params_path: "results/optimization/rsi_oversold_opt_best_params.yaml"

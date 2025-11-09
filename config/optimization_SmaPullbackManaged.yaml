@@ -1,0 +1,86 @@
+optimization:
+  strategy:
+    name: "SmaPullbackManaged"
+    module: "strategies.implementations.sma_pullback_managed_strategy"
+    class_name: "SmaPullbackManagedStrategy"
+    fixed_params:
+      use_stop_loss: true
+      stop_loss_type: "trailing"
+      use_take_profit: true
+      take_profit_type: "atr"
+      atr_period: 14
+      stop_loss_pct: 5.0
+      take_profit_atr_mult: 4.0
+    param_space:
+      trend_long_period: [150, 300, 50]
+      trend_mid_period: [30, 80, 10]
+      pullback_ma_period: [10, 30, 10]
+      rsi_period: [12, 16, 2]
+      rsi_min: [45, 60, 5]
+      vol_ma_period: [10, 30, 10]
+      require_volume_confirm:
+        type: "categorical"
+        choices: [true, false]
+      use_invalidation:
+        type: "categorical"
+        choices: [true, false]
+      reentry_cooldown_bars: [0, 10, 5]
+      # atr_period: [10, 30, 10]
+      # stop_loss_pct:
+      #   type: "float"
+      #   low: 1.0
+      #   high: 4.0
+      #   step: 1.0
+      # take_profit_atr_mult:
+      #   type: "float"
+      #   low: 2.0
+      #   high: 6.0
+      #   step: 2.0
+
+  data:
+    ticker: "AAPL"
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"
+    use_cache: true
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001
+    slippage_pct: 0.0
+
+  position_sizing:
+    enabled: false
+    method: "fixed"
+    fixed:
+      pct_size: 0.5
+
+  objective:
+    metric: "sharpe"
+    penalize_no_trades: -1.0
+    min_trades: 1
+    enforce_fast_slow_gap: false
+
+  study:
+    study_name: "sma_pullback_managed_opt"
+    direction: "maximize"
+    storage: "sqlite:///results/optimization/optuna_studies.db"
+    load_if_exists: true
+    sampler: "tpe"
+    sampler_kwargs:
+      seed: 42
+    pruner: "median"
+    pruner_kwargs: {}
+    n_trials: 50
+    timeout: null
+    n_jobs: -1
+    show_progress_bar: true
+
+  output:
+    save_study: true
+    study_path: "results/optimization/sma_pullback_managed_opt.pkl"
+    save_trials_csv: true
+    trials_csv_path: "results/optimization/sma_pullback_managed_opt_trials.csv"
+    log_file: "logs/optimization/optuna_optimizer.log"
+    dump_best_params: true
+    best_params_path: "results/optimization/sma_pullback_managed_opt_best_params.yaml"

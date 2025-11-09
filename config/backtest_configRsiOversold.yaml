@@ -1,0 +1,37 @@
+# =============================================================================
+# Configuration de backtest pour la strategie RsiOversold
+# =============================================================================
+backtest:
+  strategy: "RsiOversold"
+
+  strategy_params:
+    rsi_period: 14
+    oversold_level: 30
+    overbought_level: 70
+
+  data:
+    ticker: "AAPL"
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001
+    slippage_pct: 0.0
+
+  position_sizing:
+    enabled: true
+    method: "fixed"
+    fixed:
+      pct_size: 0.5
+
+  output:
+    plot: true
+    save_results: true
+    results_dir: "results/backtests"
+    verbose: true
+    report:
+      enable: true
+      out_dir: "reports/generated"
+      template: "default.html"
+      include_trades: true

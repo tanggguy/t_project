@@ -1,0 +1,16 @@
+strategy: SmaPullbackManaged
+objective: -2.5804083679839325
+params:
+  trend_long_period: 200
+  trend_mid_period: 40
+  pullback_ma_period: 10
+  rsi_period: 12
+  rsi_min: 50
+  vol_ma_period: 10
+  require_volume_confirm: false
+  use_invalidation: true
+  reentry_cooldown_bars: 4
+  atr_period: 20
+  stop_loss_pct: 1.0
+  take_profit_atr_mult: 4.0
+trial_number: 106

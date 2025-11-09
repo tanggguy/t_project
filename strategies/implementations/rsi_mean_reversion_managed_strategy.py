@@ -12,7 +12,7 @@ class RsiMeanReversionManagedStrategy(ManagedStrategy):
 
     params = (
         ("trend_long_period", 200),
-        ("avoid_strong_trend", True),  # éviter si SMA50 >> SMA200
+        ("avoid_strong_trend", False),  # éviter si SMA50 >> SMA200
         ("rsi_period", 14),
         ("rsi_oversold", 30),
         ("rsi_exit", 50),  # target reversion

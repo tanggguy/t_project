@@ -1,0 +1,7 @@
+strategy: RsiOversold
+objective: -2.112712691502167
+params:
+  rsi_period: 18
+  oversold_level: 45
+  overbought_level: 80
+trial_number: 64

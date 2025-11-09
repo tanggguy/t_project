@@ -215,3 +215,17 @@
 2025-11-03 21:01:42,534 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=15, risk_amount=226.37, risk_per_share=15.06, portfolio_value=11318.46
 2025-11-03 21:01:42,549 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=13, risk_amount=222.68, risk_per_share=15.95, portfolio_value=11134.09
 2025-11-03 21:01:42,565 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=13, risk_amount=226.74, risk_per_share=16.87, portfolio_value=11336.89
+2025-11-05 21:03:23,239 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=40, risk_amount=200.00, risk_per_share=4.89, portfolio_value=10000.00
+2025-11-05 21:03:23,330 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=29, risk_amount=197.54, risk_per_share=6.76, portfolio_value=9876.76
+2025-11-05 21:03:23,463 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=18, risk_amount=192.25, risk_per_share=10.59, portfolio_value=9612.55
+2025-11-05 21:05:05,262 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=40, risk_amount=200.00, risk_per_share=4.89, portfolio_value=10000.00
+2025-11-05 21:05:05,283 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=36, risk_amount=197.54, risk_per_share=5.41, portfolio_value=9876.76
+2025-11-05 21:05:05,312 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=28, risk_amount=201.60, risk_per_share=7.01, portfolio_value=10079.76
+2025-11-05 21:05:05,329 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=26, risk_amount=201.63, risk_per_share=7.49, portfolio_value=10081.72
+2025-11-05 21:05:05,335 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=29, risk_amount=196.73, risk_per_share=6.76, portfolio_value=9836.51
+2025-11-05 21:05:05,350 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=24, risk_amount=191.45, risk_per_share=7.75, portfolio_value=9572.31
+2025-11-05 21:05:05,364 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=22, risk_amount=197.76, risk_per_share=8.62, portfolio_value=9888.22
+2025-11-05 21:05:05,366 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=24, risk_amount=187.09, risk_per_share=7.56, portfolio_value=9354.74
+2025-11-05 21:05:05,410 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=13, risk_amount=174.10, risk_per_share=12.47, portfolio_value=8705.12
+2025-11-05 21:05:05,427 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=16, risk_amount=178.54, risk_per_share=10.59, portfolio_value=8926.94
+2025-11-05 21:05:05,460 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=14, risk_amount=172.93, risk_per_share=12.01, portfolio_value=8646.34

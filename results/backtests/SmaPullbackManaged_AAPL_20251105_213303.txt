@@ -1,0 +1,53 @@
+======================================================================
+RÉSULTATS DU BACKTEST
+======================================================================
+
+Stratégie: SmaPullbackManaged
+Ticker: AAPL
+Période: 2020-01-02 à 2025-10-31
+Capital Initial: 10,000.00 €
+Capital Final: 10,089.38 €
+
+Configuration:
+backtest:
+  strategy: SmaPullbackManaged
+  strategy_params:
+    trend_long_period: 200
+    trend_mid_period: 50
+    pullback_ma_period: 20
+    rsi_period: 14
+    rsi_min: 50
+    vol_ma_period: 20
+    require_volume_confirm: true
+    use_invalidation: true
+    reentry_cooldown_bars: 5
+    atr_period: 14
+    use_stop_loss: true
+    stop_loss_type: atr
+    stop_loss_atr_mult: 2.0
+    use_take_profit: true
+    take_profit_type: atr
+    take_profit_atr_mult: 4.0
+  data:
+    ticker: AAPL
+    start_date: '2020-01-01'
+    end_date: '2025-11-03'
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.001
+    slippage_pct: 0.0
+  position_sizing:
+    enabled: true
+    method: fixed
+    fixed:
+      pct_size: 0.5
+  output:
+    plot: true
+    save_results: true
+    results_dir: results/backtests
+    verbose: true
+    report:
+      enable: true
+      out_dir: reports/generated
+      template: default.html
+      include_trades: true

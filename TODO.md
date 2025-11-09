@@ -251,7 +251,7 @@ TODO COMPLET - Projet Trading Python
     Tableau des trades
     Export PDF
 
-🎨 Phase 8 : Visualisation (Semaine 7-8)
+<!-- 🎨 Phase 8 : Visualisation (Semaine 7-8)
 8.1 Charts de base
 
  Créer visualization/charts.py :
@@ -261,7 +261,7 @@ TODO COMPLET - Projet Trading Python
  Equity curve
  Drawdown chart
 
- est ce que 8.1 vaut le coup, que apporter en plus du plot natif de backtrader ?
+ est ce que 8.1 vaut le coup, que apporter en plus du plot natif de backtrader ? -->
 
 <!-- 8.2 Dashboard
 

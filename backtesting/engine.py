@@ -89,7 +89,7 @@ class BacktestEngine:
         """
         logger.debug("Configuration des analyseurs...")
         # Analyseur Sharpe Ratio
-        self.cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
+        self.cerebro.addanalyzer(bt.analyzers.SharpeRatio_A, _name="sharpe")
 
         # Analyseur des Retours agrégés (annualisés / cumulés)
         self.cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
