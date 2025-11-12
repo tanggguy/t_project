@@ -1,5 +1,5 @@
-TODO COMPLET - Projet Trading Python
-📋 Phase 1 : Setup Initial (Semaine 1)
+TODO COMPLET - Projet Trading Python : commenté = fait
+<!-- 📋 Phase 1 : Setup Initial (Semaine 1)
     1.1 Environnement de développement
 
     Créer un nouveau repository Git
@@ -34,7 +34,6 @@ TODO COMPLET - Projet Trading Python
     Capital initial
     Timezone
 
-
     Créer .env pour API keys (si nécessaire plus tard)
     Créer utils/config_loader.py pour charger les configurations
 
@@ -49,8 +48,6 @@ TODO COMPLET - Projet Trading Python
     Gestion des erreurs de téléchargement
     Validation des données (trous, valeurs aberrantes)
 
-
-
     2.2 Scripts de données
 
     Créer scripts/download_data.py :
@@ -59,13 +56,10 @@ TODO COMPLET - Projet Trading Python
     Mode batch pour télécharger multiple tickers
     Barre de progression pour téléchargements
 
-
     Créer liste de tickers par marché :
 
     config/markets/sp500.yaml
     config/markets/cac40.yaml
-
-
 
     2.3 Data preprocessing
 
@@ -75,8 +69,6 @@ TODO COMPLET - Projet Trading Python
     Détection et gestion des outliers
     Resampling (aggrégation temporelle)
 
-
-
     2.4 Validation
 
     Notebook 01_data_exploration.ipynb :
@@ -85,8 +77,6 @@ TODO COMPLET - Projet Trading Python
     Statistiques descriptives
     Vérification de la qualité des données
     Test de téléchargement sur 5-10 tickers
-
-
 
     🎯 Phase 3 : Première Stratégie Simple (Semaine 2-3)
     3.1 Base Strategy
@@ -98,8 +88,6 @@ TODO COMPLET - Projet Trading Python
     Logging intégré
     Gestion basique des ordres
 
-
-
     3.2 Stratégie Moving Average Crossover
 
     Créer strategies/implementations/ma_crossover.py :
@@ -108,8 +96,6 @@ TODO COMPLET - Projet Trading Python
     Logique : achat sur golden cross, vente sur death cross
     Position sizing simple (100% du capital)
     Pas de stop-loss pour commencer
-
-
 
     3.3 Premier Backtest
 
@@ -120,8 +106,6 @@ TODO COMPLET - Projet Trading Python
     Ajout des analyseurs basiques (returns, sharpe)
     Méthode run() qui retourne les résultats
 
-
-
     3.4 Script de test
 
     Créer scripts/run_backtest.py :
@@ -131,23 +115,19 @@ TODO COMPLET - Projet Trading Python
     3️⃣ Paramètres par Défaut Automatiques
     python scripts/run_backtest.py --config config/backtest_config.yaml
 
-
     Charger données d'un ticker (ex: AAPL)
     Lancer backtest sur 2 ans
     Afficher résultats basiques (P&L, nombre trades)
 
-
     Vérifier que tout fonctionne bout en bout
 
     📈 Phase 4 : Stategie (Semaine 3-4)
-
 
     Stratégies avec indicateurs
 
     Créer strategies/implementations/rsi_oversold.py :
 
     Achat sur RSI < 30, vente sur RSI > 70
-
 
     Créer strategies/implementations/macd_momentum.py :
 
@@ -179,13 +159,10 @@ TODO COMPLET - Projet Trading Python
     Volatility-based sizing
  
 
-
-
     5.3 Intégration
 
     Modifier base_strategy.py pour intégrer risk management
     Ajouter paramètres de risque dans configs
-
 
     🔧 Phase 6 : Optimisation Basique (Semaine 5-6)
     6.1 Setup Optuna
@@ -197,8 +174,6 @@ TODO COMPLET - Projet Trading Python
     Fonction objectif (maximize Sharpe ratio)
     Sauvegarde des études
 
-
-
     6.2 Parameter Spaces
 
     Créer optimization/parameter_spaces.py :
@@ -207,8 +182,6 @@ TODO COMPLET - Projet Trading Python
     Espaces pour RSI strategy
     Contraintes et dépendances
 
-
-
     6.3 Première optimisation
 
     Script scripts/run_optimization.py :
@@ -216,7 +189,6 @@ TODO COMPLET - Projet Trading Python
     Optimiser MA Crossover sur données historiques
     100 trials minimum
     Sauvegarder meilleurs paramètres
-
 
     Visualisation des résultats Optuna
 
@@ -229,8 +201,6 @@ TODO COMPLET - Projet Trading Python
     Win rate, Profit factor
     Average trade, Best/Worst trade
 
-
-
     7.2 Drawdown analysis
 
     Créer backtesting/analyzers/drawdown.py :
@@ -240,8 +210,6 @@ TODO COMPLET - Projet Trading Python
     Recovery time
     Underwater curve
 
-
-
     7.3 Reporting
 
     Créer reports/report_generator.py :
@@ -249,17 +217,15 @@ TODO COMPLET - Projet Trading Python
     Template HTML pour rapports
     Graphiques performance
     Tableau des trades
-    Export PDF
+    Export PDF -->
 
 <!-- 🎨 Phase 8 : Visualisation (Semaine 7-8)
 8.1 Charts de base
 
  Créer visualization/charts.py :
 
- Candlestick avec indicateurs
+ Candlestick 
  Points d'entrée/sortie
- Equity curve
- Drawdown chart
 
  est ce que 8.1 vaut le coup, que apporter en plus du plot natif de backtrader ? -->
 
@@ -292,13 +258,13 @@ TODO COMPLET - Projet Trading Python
 
 <!-- esquisser scripts/run_overfitting.py prêt à l’emploi, -->
 
-9.2 Multi-objective
+<!-- 9.2 Multi-objective
 
  Modifier optimization/objectives.py :
 
  Optimisation multi-objectifs
  Trade-off return/risque
- Contraintes custom
+ Contraintes custom -->
 
 9.3 Hyperparameter tuning
 
@@ -316,7 +282,7 @@ TODO COMPLET - Projet Trading Python
  Régime detection
 
 10.3 Machine Learning prep
-
+IA comme Filtre de Régime
  Feature engineering
  Labeling des données
  Setup pour ML (optionnel)
@@ -341,50 +307,36 @@ TODO COMPLET - Projet Trading Python
  Optimisation du code
  Profiling mémoire
 
-📱 Phase 12 : Production Ready (Semaine 11-12)
-12.1 Paper Trading
+Phase 12 : Architecture de Trading Live (Paper & Live)
+    - [ ] 12.1 Couche d'Abstraction Broker
+        - [ ] Créer une interface `BaseBroker` (avec méthodes `submit_order`, `get_position`, `get_account_balance`).
+        - [ ] Créer une implémentation `BacktestBroker` (qui wrappe le broker de Backtrader).
+        - [ ] Créer une implémentation `PaperBroker` (Alpaca).
+    - [ ] 12.2 Moteur d'Événements (Event-Driven Engine)
+        - [ ] Migrer de la boucle `next()` de Backtrader à une boucle d'événements (Event Loop : `MarketEvent`, `SignalEvent`, `OrderEvent`, `FillEvent`).
+        - [ ] *Objectif :* Utiliser la *même* logique de stratégie pour le backtest et le live.
+    - [ ] 12.3 Service de Monitoring & Alertes
+        - [ ] Logger les exécutions d'ordres vers un canal dédié (ex: Telegram, Slack).
+        - [ ] Mettre en place un "Heartbeat" (service qui vérifie que le trader tourne toujours).
 
- Créer live/paper_trader.py :
+🎯 Phase 13 : Scanner & Gestion de Portefeuille
+    - [ ] 13.1 Scanner de Marché
+        - [ ] `scripts/live_scanner.py` doit être un service indépendant (ex: cron job).
+        - [ ] Le scanner ne trade pas ; il *génère* des signaux (ex: "AAPL - Tendance Haussière H1") et les stocke (ex: dans un fichier, une DB Redis, ou une DB SQL).
+    - [ ] 13.2 Gestionnaire de Portefeuille (Le "Cerveau")
+        - [ ] Créer une classe `PortfolioManager` qui s'exécute après le Scanner.
+        - [ ] *Logique :* Lire les signaux du Scanner, vérifier les positions actuelles, et allouer le capital (en utilisant `risk_management/position_sizing.py`).
+        - [ ] Gérer les conflits (ex: 5 signaux d'achat mais capital pour 2 trades).
+        - [ ] Gérer l'allocation inter-stratégies (Que faire si 2 stratégies différentes veulent acheter le même actif ?).
 
- Connexion broker simulé
- Exécution temps réel
- Monitoring positions
-
-12.2 Alertes
-
- Système d'alertes (email/telegram)
- Monitoring des erreurs
- Daily reports automatiques
-
-12.3 Documentation
-
- Documentation complète du code
- Guide utilisateur
- Guide de déploiement
- Notebooks tutoriels
-
-🎯 Phase 13 : Déploiement et Monitoring (Semaine 12+)
-13.1 Screening
-
- Créer scripts/live_scanner.py :
-
- Scanner univers d'actions
- Détection opportunités
- Ranking des signaux
-
-13.2 Portfolio management
-
- Gestion multi-stratégies
- Allocation de capital
- Rebalancing
-
-13.3 Amélioration continue
-
- A/B testing stratégies
- Analyse des échecs
- Optimisation périodique
- Adaptation aux conditions de marché
-
+Phase 14 : Pipeline de Données de Production
+    - [ ] 14.1 Fournisseur de Données
+        - [ ] Sélectionner un fournisseur de données H1/Daily (payant ou API fiable, ex: Alpaca, IEX, EODHistoricalData).
+    - [ ] 14.2 Base de Données Temporelle (TSDB)
+        - [ ] Mettre en place une base de données optimisée pour les séries temporelles (ex: InfluxDB, TimescaleDB, ou même un stockage Parquet/S3).
+        - [ ] Créer un "ETL" qui peuple cette base de données (en dehors du script de trading).
+    - [ ] 14.3 Mise à jour du DataManager
+        - [ ] `utils/data_manager.py` doit être modifié pour lire depuis cette nouvelle base de données (en live) au lieu des fichiers CSV (en backtest).
 📈 Métriques de Succès du Projet
 Court terme (1 mois)
 

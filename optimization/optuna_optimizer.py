@@ -23,6 +23,11 @@ from backtesting.portfolio import (
     compute_portfolio_metrics,
     normalize_weights,
 )
+from optimization.objectives import (
+    evaluate_objective,
+    study_directions,
+    build_constraints_func,
+)
 from risk_management.position_sizing import (
     FixedFractionalSizer,
     FixedSizer,
@@ -119,16 +124,25 @@ class OptunaOptimizer:
         self.tickers: Sequence[str] = list(self.data_frames.keys())
         self.data_frame = self.data_frames[self.tickers[0]]  # compatibilité
 
-        self.metric_name = self.objective_config.get("metric", "sharpe").lower()
-        if self.metric_name not in {"sharpe"}:
-            raise ValueError("Seule la métrique 'sharpe' est supportée pour le moment.")
-
         self.penalty_value = float(
             self.objective_config.get("penalize_no_trades", -1.0)
         )
         self.min_trades = int(self.objective_config.get("min_trades", 1))
         self.enforce_fast_slow = bool(
             self.objective_config.get("enforce_fast_slow_gap", True)
+        )
+        self.objective_mode = str(
+            self.objective_config.get("mode", "single")
+        ).lower()
+        self.is_multi_objective = self.objective_mode == "multi"
+        self.objective_targets = self.objective_config.get("targets", [])
+        if self.is_multi_objective and not self.objective_targets:
+            raise ValueError(
+                "objective.targets doit être défini lorsque mode='multi'."
+            )
+        self.multi_penalty = self._init_multi_penalty()
+        self.constraints_func = build_constraints_func(
+            self.objective_config.get("constraints")
         )
 
         self.study: Optional[optuna.Study] = None
@@ -392,16 +406,63 @@ class OptunaOptimizer:
         if not self.enforce_fast_slow:
             return True
 
+        fast = None
+        slow = None
         if "fast_period" in params and "slow_period" in params:
-            if params["fast_period"] >= params["slow_period"]:
+            fast = params["fast_period"]
+            slow = params["slow_period"]
+        elif "ema_fast" in params and "ema_slow" in params:
+            fast = params["ema_fast"]
+            slow = params["ema_slow"]
+
+        if fast is not None and slow is not None:
+            try:
+                if float(fast) >= float(slow):
+                    return False
+            except Exception:
                 return False
 
         return True
 
+    def _init_multi_penalty(self) -> Optional[Tuple[float, ...]]:
+        if not self.objective_mode == "multi":
+            return None
+
+        penalties_cfg = self.objective_config.get("penalty_values")
+        if penalties_cfg is None:
+            penalties_cfg = [self.penalty_value] * len(self.objective_targets)
+        if len(penalties_cfg) != len(self.objective_targets):
+            raise ValueError(
+                "objective.penalty_values doit avoir la même taille que objective.targets."
+            )
+        penalties: List[float] = [float(value) for value in penalties_cfg]
+        return tuple(penalties)
+
+    def _penalty_objective(self) -> Union[float, Tuple[float, ...]]:
+        if self.is_multi_objective and self.multi_penalty is not None:
+            return tuple(self.multi_penalty)
+        return float(self.penalty_value)
+
+    def _report_objective(
+        self, trial: optuna.Trial, objective_value: Union[float, Sequence[float]]
+    ) -> None:
+        """Report the first objective to Optuna to keep pruning functional."""
+
+        # In multi-objective mode, Optuna does not support Trial.report.
+        if self.is_multi_objective:
+            return
+
+        if isinstance(objective_value, (int, float)) and math.isfinite(
+            float(objective_value)
+        ):
+            trial.report(float(objective_value), step=0)
+
     # ------------------------------------------------------------------
     # Fonction objectif Optuna
     # ------------------------------------------------------------------
-    def objective(self, trial: optuna.Trial) -> float:
+    def objective(
+        self, trial: optuna.Trial
+    ) -> Union[float, Tuple[float, ...]]:
         """Évalue un jeu de paramètres et renvoie la métrique à maximiser."""
 
         params = self._build_trial_params(trial)
@@ -412,7 +473,7 @@ class OptunaOptimizer:
                 "Trial %s rejeté (fast_period >= slow_period)", trial.number
             )
             trial.set_user_attr("constraint_violation", True)
-            return self.penalty_value
+            return self._penalty_objective()
 
         if len(self.tickers) > 1:
             return self._objective_multi_ticker(trial, params)
@@ -428,11 +489,11 @@ class OptunaOptimizer:
                 "Erreur lors de l'exécution du backtest (trial %s)", trial.number
             )
             trial.set_user_attr("error", str(exc))
-            return self.penalty_value
+            return self._penalty_objective()
 
         if not results:
             trial.set_user_attr("error", "no_results")
-            return self.penalty_value
+            return self._penalty_objective()
 
         strat = results[0]
         metrics = self._gather_metrics(strat)
@@ -449,22 +510,33 @@ class OptunaOptimizer:
                 total_trades,
                 self.min_trades,
             )
-            return self.penalty_value
+            return self._penalty_objective()
 
-        objective_value = metrics.get("objective")
-        if objective_value is None or not math.isfinite(objective_value):
-            return self.penalty_value
+        objective_value = evaluate_objective(metrics, self.objective_config)
+        if objective_value is None:
+            return self._penalty_objective()
 
-        trial.report(objective_value, step=0)
-        if trial.should_prune():
+        metrics["objective"] = (
+            list(objective_value)
+            if self.is_multi_objective and isinstance(objective_value, (tuple, list))
+            else objective_value
+        )
+
+        trial.set_user_attr("objective", metrics["objective"])
+        self._report_objective(trial, objective_value)
+        # Multi-objective does not support pruning via report/should_prune.
+        if (not self.is_multi_objective) and trial.should_prune():
             self.logger.info("Trial %s interrompu par pruner", trial.number)
             raise optuna.TrialPruned()
+
+        if self.is_multi_objective and isinstance(objective_value, (tuple, list)):
+            return tuple(float(v) for v in objective_value)
 
         return float(objective_value)
 
     def _objective_multi_ticker(
         self, trial: optuna.Trial, params: Dict[str, Any]
-    ) -> float:
+    ) -> Union[float, Tuple[float, ...]]:
         """Évalue la stratégie sur plusieurs tickers et agrège les rendements."""
 
         runs: List[Tuple[str, Dict[str, Any], pd.Series]] = []
@@ -482,11 +554,11 @@ class OptunaOptimizer:
                     "Erreur backtest multi-ticker (%s, trial %s)", ticker, trial.number
                 )
                 trial.set_user_attr("error", f"{ticker}:{exc}")
-                return self.penalty_value
+                return self._penalty_objective()
 
             if not results:
                 trial.set_user_attr("error", f"{ticker}:no_results")
-                return self.penalty_value
+                return self._penalty_objective()
 
             strat = results[0]
             metrics = self._gather_metrics(strat)
@@ -499,14 +571,14 @@ class OptunaOptimizer:
         )
         if total_trades < self.min_trades:
             trial.set_user_attr("low_trade_count", total_trades)
-            return self.penalty_value
+            return self._penalty_objective()
 
         try:
             weights = normalize_weights(self.tickers, self.data_config.get("weights"))
         except ValueError as exc:
             self.logger.error("Configuration de poids invalide: %s", exc)
             trial.set_user_attr("error", str(exc))
-            return self.penalty_value
+            return self._penalty_objective()
 
         returns_map = {ticker: returns for ticker, _, returns in runs}
         alignment = str(self.portfolio_config.get("alignment", "intersection")).lower()
@@ -514,7 +586,7 @@ class OptunaOptimizer:
 
         if portfolio_returns.empty:
             trial.set_user_attr("error", "empty_portfolio_returns")
-            return self.penalty_value
+            return self._penalty_objective()
 
         initial_capital = float(self.broker_config.get("initial_capital", 10000.0))
         portfolio_metrics, _, _, _ = compute_portfolio_metrics(
@@ -523,23 +595,36 @@ class OptunaOptimizer:
             self.analytics_settings,
         )
 
-        sharpe = portfolio_metrics.get("sharpe_ratio")
-        if sharpe is None or not math.isfinite(sharpe):
-            return self.penalty_value
-
         trial.set_user_attr("portfolio_metrics", portfolio_metrics)
         trial.set_user_attr("portfolio_weights", weights.to_dict())
         trial.set_user_attr("per_ticker_metrics", per_ticker_metrics)
         trial.set_user_attr("total_trades", total_trades)
 
-        trial.report(sharpe, step=0)
-        if trial.should_prune():
+        objective_value = evaluate_objective(
+            portfolio_metrics, self.objective_config
+        )
+        if objective_value is None:
+            return self._penalty_objective()
+
+        trial.set_user_attr(
+            "objective",
+            list(objective_value)
+            if self.is_multi_objective and isinstance(objective_value, (tuple, list))
+            else objective_value,
+        )
+
+        self._report_objective(trial, objective_value)
+        # Multi-objective does not support pruning via report/should_prune.
+        if (not self.is_multi_objective) and trial.should_prune():
             self.logger.info(
                 "Trial %s interrompu par pruner (multi-ticker)", trial.number
             )
             raise optuna.TrialPruned()
 
-        return float(sharpe)
+        if self.is_multi_objective and isinstance(objective_value, (tuple, list)):
+            return tuple(float(v) for v in objective_value)
+
+        return float(objective_value)
 
     def _extract_time_returns(self, strat: BaseStrategy) -> pd.Series:
         """Récupère la série de rendements TimeReturn depuis Backtrader."""
@@ -601,19 +686,7 @@ class OptunaOptimizer:
             (final_value / initial_capital) - 1.0 if initial_capital else 0.0
         )
 
-        metrics["objective"] = self._compute_objective(sharpe_ratio)
-
         return metrics
-
-    def _compute_objective(self, sharpe_ratio: Optional[float]) -> Optional[float]:
-        """Calcule la valeur d'objectif selon la métrique choisie."""
-
-        if self.metric_name == "sharpe":
-            if sharpe_ratio is None:
-                return None
-            return float(sharpe_ratio)
-
-        raise ValueError(f"Métrique non supportée: {self.metric_name}")
 
     # ------------------------------------------------------------------
     # Gestion de l'étude Optuna
@@ -633,6 +706,13 @@ class OptunaOptimizer:
             return optuna.samplers.RandomSampler(**sampler_kwargs)
         if sampler_name == "cmaes":
             return optuna.samplers.CmaEsSampler(**sampler_kwargs)
+        if sampler_name == "nsga2":
+            kwargs = dict(sampler_kwargs)
+            if self.constraints_func and "constraints_func" not in kwargs:
+                kwargs["constraints_func"] = self.constraints_func
+            return optuna.samplers.NSGAIISampler(**kwargs)
+        if sampler_name in {"motpe", "mo-tpe"}:
+            return optuna.samplers.MOTPESampler(**sampler_kwargs)
 
         raise ValueError(f"Sampler Optuna inconnu: {sampler_name}")
 
@@ -660,7 +740,6 @@ class OptunaOptimizer:
         study_name = self.study_config.get(
             "study_name", f"{self.strategy_name.lower()}_optimization"
         )
-        direction = self.study_config.get("direction", "maximize")
         storage = self.study_config.get("storage")
         load_if_exists = bool(self.study_config.get("load_if_exists", True))
 
@@ -674,14 +753,26 @@ class OptunaOptimizer:
                 db_path = Path(storage_url.replace("sqlite:///", ""))
                 db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        study = optuna.create_study(
-            study_name=study_name,
-            direction=direction,
-            storage=storage_url,
-            load_if_exists=load_if_exists,
-            sampler=sampler,
-            pruner=pruner,
-        )
+        if self.is_multi_objective:
+            directions = study_directions(self.objective_config)
+            study = optuna.create_study(
+                study_name=study_name,
+                directions=directions,
+                storage=storage_url,
+                load_if_exists=load_if_exists,
+                sampler=sampler,
+                pruner=pruner,
+            )
+        else:
+            direction = self.study_config.get("direction", "maximize")
+            study = optuna.create_study(
+                study_name=study_name,
+                direction=direction,
+                storage=storage_url,
+                load_if_exists=load_if_exists,
+                sampler=sampler,
+                pruner=pruner,
+            )
 
         self.logger.info("Étude Optuna prête (%s)", study_name)
         return study
@@ -788,12 +879,26 @@ class OptunaOptimizer:
             )
             return
 
-        best_params = {
-            "strategy": self.strategy_name,
-            "objective": study.best_value,
-            "params": study.best_params,
-            "trial_number": study.best_trial.number,
-        }
+        if self.is_multi_objective:
+            best_trials_payload = [
+                {
+                    "trial_number": trial.number,
+                    "values": list(trial.values),
+                    "params": trial.params,
+                }
+                for trial in study.best_trials
+            ]
+            best_params = {
+                "strategy": self.strategy_name,
+                "objectives": best_trials_payload,
+            }
+        else:
+            best_params = {
+                "strategy": self.strategy_name,
+                "objective": study.best_value,
+                "params": study.best_params,
+                "trial_number": study.best_trial.number,
+            }
 
         path = Path(path_str)
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,60 @@
+# =============================================================================
+# Configuration de backtest pour la stratégie EmaTrendStrategy
+# =============================================================================
+backtest:
+  strategy: "EmaTrend"
+
+  strategy_params:
+    # Filtre de tendance majeur
+    ema_trend: 190
+
+    # Momentum court terme
+    ema_fast: 19
+    ema_slow: 30
+
+    # Gestion des sorties via ManagedStrategy
+    use_stop_loss: true
+    stop_loss_type: "atr"
+    stop_loss_atr_mult: 3.25
+    use_take_profit: true
+    take_profit_type: "atr"
+    take_profit_atr_mult: 6.0
+    atr_period: 10
+
+  portfolio:
+    alignment: "intersection"
+    per_ticker_reports: true
+
+  data:
+    tickers:
+      - "AAPL"
+      - "MSFT"
+      - "NVDA"
+      - "AMZN"
+      - "TSLA"
+
+    start_date: "2018-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"  # EMA 200 H1 ≈ 8 jours de trading
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.0005
+    slippage_pct: 0.0005
+
+  position_sizing:
+    enabled: true
+    method: "fixed"
+    fixed:
+      pct_size: 0.4
+
+  output:
+    plot: true
+    save_results: true
+    results_dir: "results/backtests"
+    verbose: true
+    report:
+      enable: true
+      out_dir: "reports/generated"
+      template: "default.html"
+      include_trades: true

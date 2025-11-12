@@ -8,9 +8,10 @@ Ce document décrit comment lancer des optimisations de paramètres pour les str
 
 | Élément | Rôle |
 | --- | --- |
-| `optimization/optuna_optimizer.py` | Classe `OptunaOptimizer`, charge les données, configure Backtrader et pilote Optuna. |
-| `scripts/run_optimization.py` | CLI pour lancer une optimisation à partir d’un fichier YAML. |
-| `config/optimization.yaml` | Exemple de configuration (stratégie, données, espace de recherche, étude Optuna, sorties). |
+| `optimization/optuna_optimizer.py` | Classe `OptunaOptimizer`, charge les données, configure Backtrader et pilote Optuna (mono & multi-objectifs). |
+| `optimization/objectives.py` | Fonctions utilitaires pour agréger les métriques, définir les directions Optuna et déclarer des contraintes custom. |
+| `scripts/run_optimization.py` | CLI pour lancer une optimisation à partir d’un fichier YAML (affiche aussi les fronts de Pareto). |
+| `config/optimization.yaml` / `config/optimization_example.yaml` | Exemples de configuration (stratégie, données, objectifs simples ou multiples, étude Optuna, sorties). |
 
 Fonctionnalités principales :
 - Chargement des données via `DataManager` (cache, filtrage, validation d’index).
@@ -18,7 +19,8 @@ Fonctionnalités principales :
 - Support des paramètres fixes et des espaces de recherche (entiers, flottants, catégoriels, échelle logarithmique).
 - Ajout automatique des analyseurs Backtrader (Sharpe, Drawdown, Returns, Trades).
 - Gestion optionnelle du position sizing (Fixed, Fixed Fractional, Volatility-based).
-- Contraintes simples, par exemple `fast_period < slow_period`.
+- Contraintes simples et avancées (gap EMA, min trades, max drawdown) + pénalités custom.
+- Objectifs simples (Sharpe, pondérations) ou multi-objectifs (Sharpe vs drawdown, CAGR vs Ulcer) grâce à Optuna NSGA-II / MOTPE.
 - Stockage compatible Optuna Dashboard (`sqlite:///…`).
 - Exports: CSV des essais, YAML des meilleurs paramètres, DataFrame pickle des trials.
 
@@ -84,20 +86,36 @@ optimization:
       pct_size: 0.5
 
   objective:
+    mode: "single"              # "single" (défaut) ou "multi"
+    aggregation: "metric"       # "metric" ou "weighted_sum"
     metric: "sharpe"
+    # weights:
+    #   sharpe: 1.0
+    #   max_drawdown: -0.5       # Utiliser si aggregation=weighted_sum
     penalize_no_trades: -1.0
     min_trades: 1
     enforce_fast_slow_gap: true
+    # Exemple multi-objectifs :
+    # mode: "multi"
+    # targets:
+    #   - name: "sharpe"
+    #     direction: "maximize"
+    #   - name: "max_drawdown"
+    #     direction: "minimize"
+    # constraints:
+    #   min_trades: 5
+    #   max_drawdown: 0.30
+    #   fast_slow_gap: 1
 
   study:
     study_name: "sma_managed_opt"
-    direction: "maximize"
+    direction: "maximize"        # Ignoré si objective.mode = multi
     storage: "sqlite:///results/optimization/optuna_studies.db"
     load_if_exists: true
-    sampler: "tpe"
+    sampler: "tpe"               # Multi-objectifs : préférer "nsga2" ou "motpe"
     sampler_kwargs:
       seed: 42
-    pruner: "median"
+    pruner: "median"             # Multi-objectifs : mettre "none"
     pruner_kwargs: {}
     n_trials: 50
     timeout: null
@@ -119,6 +137,19 @@ optimization:
 > `weights` (ou pondération égale par défaut). La section `portfolio` contrôle la
 > façon d'aligner les dates (`intersection` / `union`) et reste facultative pour
 > les configurations mono-ticker.
+
+### Objectifs single vs multi
+
+- **Single** (`mode: "single"`)
+  - `aggregation: "metric"` : renvoie directement la métrique indiquée (`metric`).
+  - `aggregation: "weighted_sum"` : combine plusieurs métriques via `weights` (positifs = récompense, négatifs = pénalité).
+- **Multi** (`mode: "multi"`)
+  - Définissez `targets` (nom + direction) pour chaque objectif. Les alias disponibles sont définis dans `optimization/objectives.py` (sharpe, sortino, cagr, max_drawdown, ulcer, pnl, etc.).
+  - Optez pour `sampler: "nsga2"` (support des contraintes) ou `sampler: "motpe"`.
+  - Les contraintes optionnelles (`objective.constraints`) deviennent des fonctions `constraints_func` pour Optuna (≤ 0 = faisable).
+  - `dump_best_params` exporte alors l’ensemble des trials Pareto plutôt qu’un seul `best_value`.
+
+Consultez `config/optimization_example.yaml` pour un template complet couvrant la plupart des options.
 
 ### Remarques
 - `param_space` accepte :
@@ -149,8 +180,8 @@ Options principales :
 2. Résolution de la stratégie via `name` ou `module`/`class_name`.
 3. `OptunaOptimizer` charge les données, configure Cerebro, applique le broker et le position sizing.
 4. À chaque essai, la stratégie est exécutée avec les paramètres suggérés ; les analyzers fournissent Sharpe, drawdown, retours, nombre de trades.
-5. La fonction objectif renvoie le Sharpe (ou la pénalité si contrainte violée / trop peu de trades).
-6. Optuna sauvegarde les essais et met à jour l’étude dans SQLite.
+5. La fonction objectif renvoie soit une valeur unique (Sharpe, pondération custom) soit un tuple (multi-objectifs). Les contraintes/pénalités remplacent la valeur si besoin.
+6. Optuna sauvegarde les essais et met à jour l’étude dans SQLite. La CLI affiche la meilleure valeur (single) ou la liste des points de Pareto (multi).
 
 ---
 
@@ -161,7 +192,7 @@ Options principales :
 | `results/optimization/optuna_studies.db` | Base SQLite contenant l’étude (compatible dashboard). |
 | `results/optimization/sma_managed_opt.pkl` | DataFrame pickle des essais (colonnes trial/value/params/user_attrs). |
 | `results/optimization/sma_managed_opt_trials.csv` | Historique des essais au format CSV. |
-| `results/optimization/sma_managed_opt_best_params.yaml` | Meilleurs paramètres et valeur objectif. |
+| `results/optimization/sma_managed_opt_best_params.yaml` | Meilleurs paramètres (single) ou front de Pareto complet (multi). |
 | `logs/optimization/optuna_optimizer.log` | Logs détaillés d’exécution Optuna. |
 | `logs/optimization/run_optimization.log` | Logs de la CLI. |
 
@@ -184,8 +215,8 @@ Cela offre l’historique des optimisations, l’importance des paramètres, les
 ## 6. Conseils de personnalisation
 
 - **Nouvelles stratégies** : Ajoutez la classe dans `strategies/implementations` (héritage `BaseStrategy`) et spécifiez son `param_space`.
-- **Objectifs additionnels** : Étendre `_compute_objective` dans `OptunaOptimizer` pour supporter d’autres métriques (Sortino, Calmar…).
-- **Contraintes avancées** : Ajouter des règles dans `_validate_params` au-delà de `fast_period < slow_period`.
+- **Objectifs additionnels** : Ajoutez vos métriques/pondérations dans `optimization/objectives.py` (nouveaux alias, agrégations, tuples multi-objectifs).
+- **Contraintes avancées** : Combinez `_validate_params` (contrôles locaux) et `objective.constraints` (min_trades, max_drawdown, fast_slow_gap) pour piloter NSGA-II.
 - **Position sizing** : Activer selon les besoins de la stratégie testée.
 - **Parallélisation** : Ajuster `n_jobs` (>1) et vérifier que le cache de données est prêt pour éviter les téléchargements concurrents.
 
@@ -198,6 +229,7 @@ Cela offre l’historique des optimisations, l’importance des paramètres, les
 | « param_space ne peut pas être vide » | Bloc `param_space` manquant | Définir au moins un paramètre optimisable. |
 | Erreur « Impossible de charger des données » | Période invalide ou cache absent | Vérifier `start_date`/`end_date`, vider/rafraîchir le cache si nécessaire. |
 | Objective = -1.0 | Contrainte violée ou pas assez de trades | Inspecter `user_attrs` (`constraint_violation`, `total_trades`). |
+| RuntimeError "single best trial" | Étude lancée en mode multi-objectifs | Lire les résultats via `study.best_trials` (affichés automatiquement par `run_optimization.py`). |
 | Dashboard vide | Mauvaise URL SQLite | Vérifier que CLI et dashboard pointent vers le même `sqlite:///path`. |
 | Refresh lent/erreurs multi-jobs | Téléchargement de données concurrent | Pré-chauffer le cache en lançant un backtest simple avant l’optimisation. |
 

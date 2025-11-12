@@ -202,14 +202,31 @@ def main() -> None:
     )
 
     logger.info("Optimisation terminée")
-    logger.info("Meilleure valeur: %.6f", study.best_value)
-    logger.info("Meilleurs paramètres: %s", study.best_params)
 
-    print("\n=== OPTIMISATION TERMINÉE ===")
-    print(f"Best value : {study.best_value:.6f}")
-    print("Best params:")
-    for key, value in study.best_params.items():
-        print(f"  - {key}: {value}")
+    if getattr(optimizer, "is_multi_objective", False):
+        pareto_trials = study.best_trials
+        logger.info(
+            "Étude multi-objectifs: %s points de Pareto", len(pareto_trials)
+        )
+        print("\n=== OPTIMISATION TERMINÉE (MULTI-OBJECTIF) ===")
+        print(f"Nombre de solutions Pareto : {len(pareto_trials)}")
+        for trial in pareto_trials:
+            values_str = ", ".join(f"{val:.6f}" for val in trial.values)
+            print(
+                f"Trial #{trial.number} | valeurs = [{values_str}]"
+            )
+            for key, value in trial.params.items():
+                print(f"  - {key}: {value}")
+            print("---")
+    else:
+        logger.info("Meilleure valeur: %.6f", study.best_value)
+        logger.info("Meilleurs paramètres: %s", study.best_params)
+
+        print("\n=== OPTIMISATION TERMINÉE ===")
+        print(f"Best value : {study.best_value:.6f}")
+        print("Best params:")
+        for key, value in study.best_params.items():
+            print(f"  - {key}: {value}")
 
 
 if __name__ == "__main__":

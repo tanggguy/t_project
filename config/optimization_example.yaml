@@ -1,0 +1,124 @@
+# =============================================================================
+# Exemple complet de configuration d'optimisation Optuna.
+# Chaque section commente les choix possibles pour accélérer vos futurs setups.
+# Copiez ce fichier et adaptez les valeurs selon la stratégie ciblée.
+# =============================================================================
+optimization:
+  strategy:
+    name: "StrategyDisplayName"        # Nom lisible (utilisé dans les logs et exports)
+    module: "strategies.module_path"   # Module Python contenant la classe Backtrader
+    class_name: "MyStrategyClass"      # Classe à instancier
+
+    fixed_params:                      # Paramètres figés durant l'optimisation
+      use_stop_loss: true
+      # Ajoutez ici tout paramètre constant (ex: type de stop, booléens, etc.)
+
+    param_space:
+      # --- Paramètre numérique simple ---
+      ema_fast: [8, 20, 1]             # Tuple/list -> suggest_int (low, high, step facultatif)
+
+      # --- Paramètre float avancé ---
+      atr_multiplier:
+        type: "float"                  # Types supportés: int | float | categorical
+        low: 1.0
+        high: 5.0
+        step: 0.25
+        log: false                     # true pour optimisation log-scale (ou scale: "log")
+
+      # --- Choix discret ---
+      regime_filter:
+        type: "categorical"
+        choices: ["none", "ema", "adx", "volatility"]
+
+      # --- Valeur fixe (rare) ---
+      risk_pct: 0.02
+
+  data:
+    # Choix: ticker (single) OU tickers (liste multi-actifs)
+    ticker: "AAPL"                     # Utilisez 'tickers' + weights pour portefeuilles
+    start_date: "2018-01-01"
+    end_date: "2024-12-31"
+    interval: "1d"                     # Ex: "1d", "4h", "15m"
+    use_cache: true                    # true = privilégier les données locales
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.0005             # Ou commission_fixed (en devise)
+    slippage_pct: 0.0005               # Laisser vide pour ignorer
+
+  position_sizing:
+    enabled: true
+    method: "fixed"                    # "fixed", "fixed_fractional", "volatility_based"
+    fixed:
+      pct_size: 0.4                    # Pour method="fixed" : stake / pct_size
+    fixed_fractional:
+      risk_pct: 0.02
+      stop_distance: 0.03
+    volatility_based:
+      risk_pct: 0.02
+      atr_period: 14
+      atr_multiplier: 2.0
+
+  objective:
+    # mode: "single" (par défaut) -> renvoie un score unique
+    # mode: "multi" -> renvoie un tuple pour des objectifs contradictoires
+    mode: "single"
+
+    # SINGLE-OBJECTIVE:
+    #   aggregation: "metric" (défaut) -> utiliser la clé 'metric'
+    #   aggregation: "weighted_sum" -> combiner plusieurs métriques avec 'weights'
+    metric: "sharpe"                   # Aliases pris en charge: sharpe, sortino, cagr, calmar, pnl, etc.
+    aggregation: "metric"
+    # weights:
+    #   sharpe: 1.0
+    #   max_drawdown: -0.5             # Négatif = pénalise (réduction du score)
+
+    # MULTI-OBJECTIVE:
+    # targets:
+    #   - name: "cagr"                 # Métriques identiques aux alias ci-dessus
+    #     direction: "maximize"        # Chaque target: 'maximize' ou 'minimize'
+    #   - name: "max_drawdown"
+    #     direction: "minimize"
+    # penalty_values: [-2.0, 0.5]      # Optionnel: vecteur de pénalité (sinon répète penalize_no_trades)
+
+    penalize_no_trades: -2.0           # Score renvoyé si le backtest échoue / aucun trade
+    min_trades: 5                      # Requis pour valider un trial
+    enforce_fast_slow_gap: true        # Active le contrôle fast_period < slow_period / ema_fast < ema_slow
+
+    constraints:                       # Interprétées si sampler = NSGA-II (multi) ou simple logging
+      min_trades: 5                    # Constraint <= 0 (Optuna)
+      max_drawdown: 0.30               # Portefeuille ou stratégie doit rester sous 30% de DD
+      fast_slow_gap: 1                 # impose fast + gap <= slow (EMA ou MA)
+
+  study:
+    study_name: "my_strategy_opt"
+    storage: "sqlite:///results/optimization/optuna_studies.db"
+    load_if_exists: true
+
+    # direction (single) ou directions (multi) sont déduits automatiquement si non fournis
+    direction: "maximize"
+
+    sampler: "tpe"                     # Options: tpe | random | cmaes | nsga2 | motpe
+    sampler_kwargs:
+      seed: 42                         # Ajoutez tout kw Optuna (e.g. n_startup_trials, multivariate)
+
+    pruner: "median"                   # Options: median | sha | hyperband | none
+    pruner_kwargs: {}
+
+    n_trials: 100
+    timeout: null                      # secondes max (null = illimité)
+    n_jobs: 1                          # -1 = parallélise sur tous les cœurs (attention aux conflits I/O)
+    show_progress_bar: true            # False recommandé pour n_jobs != 1
+
+  output:
+    save_study: true
+    study_path: "results/optimization/my_strategy.pkl"  # Pickle du DataFrame des trials
+
+    save_trials_csv: true
+    trials_csv_path: "results/optimization/my_strategy_trials.csv"
+
+    dump_best_params: true
+    best_params_path: "results/optimization/my_strategy_best.yaml"
+    # Multi-objective -> sauvegarde la liste des meilleurs points de Pareto
+
+    log_file: "logs/optimization/optuna_optimizer.log"

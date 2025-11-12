@@ -1,15 +1,73 @@
 # config/markets/cac40.yaml
-# Échantillon des tickers du CAC 40 (Euronext Paris)
-# Le suffixe .PA est requis par yfinance
+# Tickers phares du CAC 40 (suffixe .PA) regroupés par secteur pour faciliter
+# les sélections ciblées (unibail coté à Amsterdam -> URW.AS).
 
 tickers:
-  - "MC.PA"   # LVMH
-  - "TTE.PA"  # TotalEnergies
-  - "SAN.PA"  # Sanofi
-  - "OR.PA"   # L'Oréal
-  - "KER.PA"  # Kering
-  - "BNP.PA"  # BNP Paribas
-  - "CS.PA"   # AXA
-  - "SU.PA"   # Schneider Electric
-  - "AI.PA"   # Air Liquide
-  - "AIR.PA"  # Airbus
+  # --- Luxe & consommation discrétionnaire ---
+  - "MC.PA"    # LVMH Moët Hennessy Louis Vuitton
+  - "RMS.PA"   # Hermès International
+  - "KER.PA"   # Kering
+  - "OR.PA"    # L'Oréal
+  - "RI.PA"    # Pernod Ricard
+  - "AC.PA"    # Accor
+  - "ML.PA"    # Michelin
+  - "RNO.PA"   # Renault
+  - "STLA.PA"  # Stellantis (listing Paris)
+
+  # --- Consommation de base & distribution ---
+  - "BN.PA"    # Danone
+  - "CA.PA"    # Carrefour
+  - "SW.PA"    # Sodexo
+  - "CDI.PA"   # Christian Dior (holding luxe)
+  - "ORA.PA"   # Orange (services grand public)
+
+  # --- Santé & sciences de la vie ---
+  - "SAN.PA"   # Sanofi
+  - "AI.PA"    # Air Liquide
+  - "DSY.PA"   # Dassault Systèmes (logiciels life-science)
+  - "ERF.PA"   # Eurofins Scientific
+  - "EL.PA"    # EssilorLuxottica
+
+  # --- Finance & assurance ---
+  - "BNP.PA"   # BNP Paribas
+  - "ACA.PA"   # Crédit Agricole
+  - "GLE.PA"   # Société Générale
+  - "CS.PA"    # AXA
+  - "EDEN.PA"  # Edenred
+
+  # --- Industrie, infrastructure & aérospatial ---
+  - "AIR.PA"   # Airbus SE
+  - "SAF.PA"   # Safran
+  - "ALO.PA"   # Alstom
+  - "DG.PA"    # Vinci
+  - "EN.PA"    # Bouygues
+  - "HO.PA"    # Thales
+  - "SU.PA"    # Schneider Electric
+  - "LR.PA"    # Legrand
+  - "FGR.PA"   # Eiffage
+
+  # --- Technologie, paiements & communication ---
+  - "CAP.PA"   # Capgemini
+  - "TEP.PA"   # Teleperformance
+  - "WLN.PA"   # Worldline
+  - "STM.PA"   # STMicroelectronics (Paris listing)
+  - "PUB.PA"   # Publicis Groupe
+  - "VIV.PA"   # Vivendi
+
+  # --- Énergie, utilités & environnement ---
+  - "TTE.PA"   # TotalEnergies
+  - "ENGI.PA"  # Engie
+  - "EDF.PA"   # Électricité de France
+  - "VIE.PA"   # Veolia Environnement
+  - "AKW.PA"   # Albioma / Transition énergétique (mid/large)
+
+  # --- Matériaux & chimie ---
+  - "SGO.PA"   # Saint-Gobain
+  - "AKE.PA"   # Arkema
+  - "MT.AS"    # ArcelorMittal (listing Amsterdam)
+  - "SOLB.BR"  # Solvay (référence matériaux, Bruxelles)
+
+  # --- Immobilier & foncières ---
+  - "URW.AS"   # Unibail-Rodamco-Westfield
+  - "ICAD.PA"  # Icade
+  - "COV.PA"   # Covivio

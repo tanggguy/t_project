@@ -2235,3 +2235,159 @@
 2025-11-12 21:21:08,658 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
 2025-11-12 21:21:08,660 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
 2025-11-12 21:21:08,696 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-12 22:25:59,913 - risk_management.position_sizing - INFO - FixedSizer: size=216, cash=25000.00, price=46.19
+2025-11-12 22:25:59,933 - risk_management.position_sizing - INFO - FixedSizer: size=153, cash=26324.47, price=68.79
+2025-11-12 22:25:59,950 - risk_management.position_sizing - INFO - FixedSizer: size=102, cash=28627.48, price=111.73
+2025-11-12 22:25:59,963 - risk_management.position_sizing - INFO - FixedSizer: size=97, cash=30882.94, price=127.09
+2025-11-12 22:25:59,968 - risk_management.position_sizing - INFO - FixedSizer: size=96, cash=30385.24, price=126.60
+2025-11-12 22:25:59,978 - risk_management.position_sizing - INFO - FixedSizer: size=86, cash=31594.26, price=145.98
+2025-11-12 22:25:59,985 - risk_management.position_sizing - INFO - FixedSizer: size=78, cash=33158.53, price=169.35
+2025-11-12 22:25:59,989 - risk_management.position_sizing - INFO - FixedSizer: size=74, cash=31672.68, price=170.71
+2025-11-12 22:26:00,004 - risk_management.position_sizing - INFO - FixedSizer: size=80, cash=30722.34, price=153.17
+2025-11-12 22:26:00,007 - risk_management.position_sizing - INFO - FixedSizer: size=84, cash=29846.64, price=140.79
+2025-11-12 22:26:00,031 - risk_management.position_sizing - INFO - FixedSizer: size=61, cash=28963.29, price=187.44
+2025-11-12 22:26:00,035 - risk_management.position_sizing - INFO - FixedSizer: size=64, cash=28341.89, price=176.94
+2025-11-12 22:26:00,038 - risk_management.position_sizing - INFO - FixedSizer: size=61, cash=27697.30, price=179.88
+2025-11-12 22:26:00,051 - risk_management.position_sizing - INFO - FixedSizer: size=59, cash=27021.39, price=181.90
+2025-11-12 22:26:00,058 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=28479.26, price=223.46
+2025-11-12 22:26:00,072 - risk_management.position_sizing - INFO - FixedSizer: size=49, cash=30003.25, price=243.77
+2025-11-12 22:26:00,080 - risk_management.position_sizing - INFO - FixedSizer: size=57, cash=28987.14, price=200.94
+2025-11-12 22:26:00,085 - risk_management.position_sizing - INFO - FixedSizer: size=55, cash=27912.91, price=202.49
+2025-11-12 22:26:01,643 - risk_management.position_sizing - INFO - FixedSizer: size=96, cash=25000.00, price=103.95
+2025-11-12 22:26:01,648 - risk_management.position_sizing - INFO - FixedSizer: size=95, cash=24148.08, price=100.97
+2025-11-12 22:26:01,661 - risk_management.position_sizing - INFO - FixedSizer: size=83, cash=25308.76, price=120.78
+2025-11-12 22:26:01,691 - risk_management.position_sizing - INFO - FixedSizer: size=67, cash=26492.67, price=157.51
+2025-11-12 22:26:01,704 - risk_management.position_sizing - INFO - FixedSizer: size=56, cash=29323.74, price=206.92
+2025-11-12 22:26:01,707 - risk_management.position_sizing - INFO - FixedSizer: size=53, cash=28510.66, price=214.10
+2025-11-12 22:26:01,721 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=30201.08, price=241.13
+2025-11-12 22:26:01,732 - risk_management.position_sizing - INFO - FixedSizer: size=42, cash=31030.95, price=292.95
+2025-11-12 22:26:01,737 - risk_management.position_sizing - INFO - FixedSizer: size=39, cash=32184.57, price=324.45
+2025-11-12 22:26:01,744 - risk_management.position_sizing - INFO - FixedSizer: size=43, cash=31316.59, price=290.92
+2025-11-12 22:26:01,751 - risk_management.position_sizing - INFO - FixedSizer: size=49, cash=30606.84, price=246.99
+2025-11-12 22:26:01,756 - risk_management.position_sizing - INFO - FixedSizer: size=45, cash=29269.17, price=256.59
+2025-11-12 22:26:01,764 - risk_management.position_sizing - INFO - FixedSizer: size=52, cash=30905.92, price=233.59
+2025-11-12 22:26:01,782 - risk_management.position_sizing - INFO - FixedSizer: size=48, cash=29820.21, price=243.85
+2025-11-12 22:26:01,795 - risk_management.position_sizing - INFO - FixedSizer: size=34, cash=28342.44, price=327.94
+2025-11-12 22:26:01,798 - risk_management.position_sizing - INFO - FixedSizer: size=33, cash=27684.80, price=327.48
+2025-11-12 22:26:01,813 - risk_management.position_sizing - INFO - FixedSizer: size=27, cash=28693.82, price=411.97
+2025-11-12 22:26:01,821 - risk_management.position_sizing - INFO - FixedSizer: size=27, cash=29786.12, price=427.38
+2025-11-12 22:26:01,825 - risk_management.position_sizing - INFO - FixedSizer: size=27, cash=29235.63, price=421.57
+2025-11-12 22:26:01,829 - risk_management.position_sizing - INFO - FixedSizer: size=27, cash=28737.55, price=422.03
+2025-11-12 22:26:01,849 - risk_management.position_sizing - INFO - FixedSizer: size=21, cash=28117.99, price=517.93
+2025-11-12 22:26:02,305 - risk_management.position_sizing - INFO - FixedSizer: size=3064, cash=25000.00, price=3.26
+2025-11-12 22:26:02,313 - risk_management.position_sizing - INFO - FixedSizer: size=2129, cash=22868.81, price=4.30
+2025-11-12 22:26:02,319 - risk_management.position_sizing - INFO - FixedSizer: size=2585, cash=24468.61, price=3.79
+2025-11-12 22:26:02,335 - risk_management.position_sizing - INFO - FixedSizer: size=1383, cash=23125.23, price=6.68
+2025-11-12 22:26:02,350 - risk_management.position_sizing - INFO - FixedSizer: size=742, cash=26188.42, price=14.12
+2025-11-12 22:26:02,352 - risk_management.position_sizing - INFO - FixedSizer: size=752, cash=25387.16, price=13.50
+2025-11-12 22:26:02,361 - risk_management.position_sizing - INFO - FixedSizer: size=695, cash=24278.17, price=13.95
+2025-11-12 22:26:02,374 - risk_management.position_sizing - INFO - FixedSizer: size=471, cash=26129.57, price=22.18
+2025-11-12 22:26:02,380 - risk_management.position_sizing - INFO - FixedSizer: size=358, cash=27692.55, price=30.89
+2025-11-12 22:26:02,386 - risk_management.position_sizing - INFO - FixedSizer: size=386, cash=25802.14, price=26.69
+2025-11-12 22:26:02,397 - risk_management.position_sizing - INFO - FixedSizer: size=595, cash=24168.58, price=16.24
+2025-11-12 22:26:02,406 - risk_management.position_sizing - INFO - FixedSizer: size=769, cash=27150.26, price=14.11
+2025-11-12 22:26:02,408 - risk_management.position_sizing - INFO - FixedSizer: size=603, cash=25457.74, price=16.88
+2025-11-12 22:26:02,425 - risk_management.position_sizing - INFO - FixedSizer: size=237, cash=27905.47, price=46.94
+2025-11-12 22:26:02,434 - risk_management.position_sizing - INFO - FixedSizer: size=228, cash=26226.07, price=45.93
+2025-11-12 22:26:02,447 - risk_management.position_sizing - INFO - FixedSizer: size=127, cash=28231.91, price=88.75
+2025-11-12 22:26:02,454 - risk_management.position_sizing - INFO - FixedSizer: size=96, cash=31209.67, price=129.95
+2025-11-12 22:26:02,457 - risk_management.position_sizing - INFO - FixedSizer: size=95, cash=28981.01, price=120.84
+2025-11-12 22:26:02,483 - risk_management.position_sizing - INFO - FixedSizer: size=61, cash=27532.52, price=177.82
+2025-11-12 23:33:59,598 - risk_management.position_sizing - INFO - FixedSizer: size=91, cash=10000.00, price=43.88
+2025-11-12 23:33:59,621 - risk_management.position_sizing - INFO - FixedSizer: size=57, cash=9569.08, price=66.52
+2025-11-12 23:33:59,635 - risk_management.position_sizing - INFO - FixedSizer: size=37, cash=10548.07, price=113.23
+2025-11-12 23:33:59,645 - risk_management.position_sizing - INFO - FixedSizer: size=35, cash=11549.04, price=129.66
+2025-11-12 23:33:59,658 - risk_management.position_sizing - INFO - FixedSizer: size=33, cash=12118.58, price=145.42
+2025-11-12 23:33:59,665 - risk_management.position_sizing - INFO - FixedSizer: size=29, cash=12723.02, price=172.23
+2025-11-12 23:33:59,670 - risk_management.position_sizing - INFO - FixedSizer: size=28, cash=12065.09, price=171.35
+2025-11-12 23:33:59,681 - risk_management.position_sizing - INFO - FixedSizer: size=30, cash=11609.59, price=151.30
+2025-11-12 23:33:59,707 - risk_management.position_sizing - INFO - FixedSizer: size=27, cash=12385.71, price=180.94
+2025-11-12 23:33:59,720 - risk_management.position_sizing - INFO - FixedSizer: size=26, cash=12070.23, price=180.24
+2025-11-12 23:33:59,734 - risk_management.position_sizing - INFO - FixedSizer: size=22, cash=12874.42, price=227.49
+2025-11-12 23:33:59,740 - risk_management.position_sizing - INFO - FixedSizer: size=21, cash=13391.72, price=244.04
+2025-11-12 23:34:00,612 - risk_management.position_sizing - INFO - FixedSizer: size=38, cash=10000.00, price=105.07
+2025-11-12 23:34:00,615 - risk_management.position_sizing - INFO - FixedSizer: size=38, cash=9484.58, price=99.55
+2025-11-12 23:34:00,645 - risk_management.position_sizing - INFO - FixedSizer: size=24, cash=10027.51, price=165.68
+2025-11-12 23:34:00,658 - risk_management.position_sizing - INFO - FixedSizer: size=20, cash=11016.02, price=212.28
+2025-11-12 23:34:00,660 - risk_management.position_sizing - INFO - FixedSizer: size=19, cash=10650.20, price=214.10
+2025-11-12 23:34:00,675 - risk_management.position_sizing - INFO - FixedSizer: size=18, cash=11355.74, price=243.10
+2025-11-12 23:34:00,685 - risk_management.position_sizing - INFO - FixedSizer: size=16, cash=11789.32, price=292.95
+2025-11-12 23:34:00,695 - risk_management.position_sizing - INFO - FixedSizer: size=16, cash=12339.38, price=301.81
+2025-11-12 23:34:00,697 - risk_management.position_sizing - INFO - FixedSizer: size=17, cash=11946.58, price=273.99
+2025-11-12 23:34:00,713 - risk_management.position_sizing - INFO - FixedSizer: size=22, cash=12674.88, price=229.48
+2025-11-12 23:34:00,730 - risk_management.position_sizing - INFO - FixedSizer: size=14, cash=12152.49, price=332.92
+2025-11-12 23:34:00,735 - risk_management.position_sizing - INFO - FixedSizer: size=14, cash=11819.16, price=327.70
+2025-11-12 23:34:00,748 - risk_management.position_sizing - INFO - FixedSizer: size=11, cash=12427.03, price=419.17
+2025-11-12 23:34:00,758 - risk_management.position_sizing - INFO - FixedSizer: size=11, cash=12905.06, price=431.91
+2025-11-12 23:34:00,774 - risk_management.position_sizing - INFO - FixedSizer: size=11, cash=12509.52, price=423.92
+2025-11-12 23:34:00,784 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=13641.59, price=508.45
+2025-11-12 23:34:01,238 - risk_management.position_sizing - INFO - FixedSizer: size=686, cash=10000.00, price=5.82
+2025-11-12 23:34:01,258 - risk_management.position_sizing - INFO - FixedSizer: size=1161, cash=11416.45, price=3.93
+2025-11-12 23:34:01,281 - risk_management.position_sizing - INFO - FixedSizer: size=664, cash=10711.76, price=6.45
+2025-11-12 23:34:01,304 - risk_management.position_sizing - INFO - FixedSizer: size=383, cash=12927.05, price=13.49
+2025-11-12 23:34:01,310 - risk_management.position_sizing - INFO - FixedSizer: size=350, cash=12367.01, price=14.11
+2025-11-12 23:34:01,326 - risk_management.position_sizing - INFO - FixedSizer: size=243, cash=13514.58, price=22.18
+2025-11-12 23:34:01,339 - risk_management.position_sizing - INFO - FixedSizer: size=224, cash=14362.88, price=25.59
+2025-11-12 23:34:01,341 - risk_management.position_sizing - INFO - FixedSizer: size=250, cash=13468.32, price=21.47
+2025-11-12 23:34:01,358 - risk_management.position_sizing - INFO - FixedSizer: size=420, cash=15362.38, price=14.60
+2025-11-12 23:34:01,376 - risk_management.position_sizing - INFO - FixedSizer: size=123, cash=14489.71, price=46.78
+2025-11-12 23:34:01,379 - risk_management.position_sizing - INFO - FixedSizer: size=120, cash=13991.16, price=46.55
+2025-11-12 23:34:01,391 - risk_management.position_sizing - INFO - FixedSizer: size=68, cash=15044.28, price=87.70
+2025-11-12 23:34:01,402 - risk_management.position_sizing - INFO - FixedSizer: size=52, cash=16760.80, price=127.20
+2025-11-12 23:34:01,405 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=15609.80, price=123.47
+2025-11-12 23:34:01,861 - risk_management.position_sizing - INFO - FixedSizer: size=47, cash=10000.00, price=84.19
+2025-11-12 23:34:01,875 - risk_management.position_sizing - INFO - FixedSizer: size=48, cash=10768.19, price=88.26
+2025-11-12 23:34:01,890 - risk_management.position_sizing - INFO - FixedSizer: size=45, cash=10234.98, price=90.03
+2025-11-12 23:34:01,904 - risk_management.position_sizing - INFO - FixedSizer: size=23, cash=9484.24, price=164.33
+2025-11-12 23:34:01,907 - risk_management.position_sizing - INFO - FixedSizer: size=22, cash=9145.43, price=165.57
+2025-11-12 23:34:01,939 - risk_management.position_sizing - INFO - FixedSizer: size=20, cash=8653.68, price=164.89
+2025-11-12 23:34:01,950 - risk_management.position_sizing - INFO - FixedSizer: size=26, cash=8253.88, price=123.53
+2025-11-12 23:34:01,961 - risk_management.position_sizing - INFO - FixedSizer: size=38, cash=8894.02, price=92.17
+2025-11-12 23:34:01,977 - risk_management.position_sizing - INFO - FixedSizer: size=24, cash=8478.16, price=138.60
+2025-11-12 23:34:01,991 - risk_management.position_sizing - INFO - FixedSizer: size=20, cash=9225.31, price=184.30
+2025-11-12 23:34:01,998 - risk_management.position_sizing - INFO - FixedSizer: size=18, cash=8621.34, price=186.49
+2025-11-12 23:34:02,014 - risk_management.position_sizing - INFO - FixedSizer: size=17, cash=9133.81, price=211.37
+2025-11-12 23:34:02,462 - risk_management.position_sizing - INFO - FixedSizer: size=179, cash=10000.00, price=22.32
+2025-11-12 23:34:02,482 - risk_management.position_sizing - INFO - FixedSizer: size=250, cash=9173.40, price=14.64
+2025-11-12 23:34:02,497 - risk_management.position_sizing - INFO - FixedSizer: size=117, cash=8718.26, price=29.67
+2025-11-12 23:34:02,502 - risk_management.position_sizing - INFO - FixedSizer: size=51, cash=6353.52, price=49.68
+2025-11-12 23:34:02,515 - risk_management.position_sizing - INFO - FixedSizer: size=20, cash=7403.66, price=147.20
+2025-11-12 23:34:02,525 - risk_management.position_sizing - INFO - FixedSizer: size=13, cash=8577.56, price=246.28
+2025-11-12 23:34:02,531 - risk_management.position_sizing - INFO - FixedSizer: size=14, cash=8025.10, price=223.96
+2025-11-12 23:34:02,543 - risk_management.position_sizing - INFO - FixedSizer: size=9, cash=8859.19, price=362.06
+2025-11-12 23:34:02,549 - risk_management.position_sizing - INFO - FixedSizer: size=9, cash=8164.20, price=337.97
+2025-11-12 23:34:02,562 - risk_management.position_sizing - INFO - FixedSizer: size=11, cash=7592.65, price=265.25
+2025-11-12 23:34:02,576 - risk_management.position_sizing - INFO - FixedSizer: size=19, cash=8699.82, price=180.59
+2025-11-12 23:34:02,586 - risk_management.position_sizing - INFO - FixedSizer: size=11, cash=8048.19, price=273.58
+2025-11-12 23:34:02,591 - risk_management.position_sizing - INFO - FixedSizer: size=12, cash=7451.57, price=246.72
+2025-11-12 23:34:02,608 - risk_management.position_sizing - INFO - FixedSizer: size=14, cash=6991.13, price=198.84
+2025-11-12 23:34:02,613 - risk_management.position_sizing - INFO - FixedSizer: size=9, cash=6362.41, price=269.19
+2025-11-12 23:34:02,630 - risk_management.position_sizing - INFO - FixedSizer: size=9, cash=7011.55, price=297.81
+2025-11-12 23:52:38,598 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-12 23:52:38,601 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-12 23:52:38,604 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-12 23:52:38,608 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-12 23:52:38,610 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-12 23:52:38,611 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-12 23:52:38,631 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-12 23:57:52,121 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-12 23:57:52,123 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-12 23:57:52,126 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-12 23:57:52,128 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-12 23:57:52,129 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-12 23:57:52,131 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-12 23:57:52,149 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-12 23:59:58,835 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-12 23:59:58,839 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-12 23:59:58,842 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-12 23:59:58,848 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-12 23:59:58,851 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-12 23:59:58,854 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-12 23:59:58,897 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-13 00:14:23,782 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-13 00:14:23,786 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-13 00:14:23,789 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-13 00:14:23,795 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-13 00:14:23,798 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-13 00:14:23,802 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-13 00:14:23,848 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)

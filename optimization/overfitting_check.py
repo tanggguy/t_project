@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
@@ -117,7 +117,7 @@ class OverfittingChecker:
         self.analytics_settings = self._load_analytics_settings()
 
         self.run_id = run_id or self.strategy_class.__name__.lower()
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         base_output = Path(output_dir or "results/overfitting")
         self.output_root = base_output / self.run_id / timestamp
         self.output_root.mkdir(parents=True, exist_ok=True)
@@ -1171,7 +1171,7 @@ class OverfittingChecker:
         return {
             "run_id": self.run_id,
             "strategy": self.strategy_class.__name__,
-            "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M %Z"),
             "data_start": start.strftime("%Y-%m-%d") if isinstance(start, pd.Timestamp) else None,
             "data_end": end.strftime("%Y-%m-%d") if isinstance(end, pd.Timestamp) else None,
         }

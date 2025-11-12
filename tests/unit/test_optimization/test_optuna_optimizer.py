@@ -68,6 +68,8 @@ def stub_data_manager(monkeypatch: pytest.MonkeyPatch, sample_ohlcv: pd.DataFram
 def _make_optimizer(
     tmp_path: Path,
     param_space: Optional[Dict[str, Any]] = None,
+    objective_config: Optional[Dict[str, Any]] = None,
+    study_config: Optional[Dict[str, Any]] = None,
 ) -> OptunaOptimizer:
     """Construit un optimiseur prêt à l'emploi pour les tests."""
 
@@ -97,13 +99,15 @@ def _make_optimizer(
         fixed_params={},
         broker_config={"initial_capital": 10_000.0},
         position_sizing_config={"enabled": False},
-        objective_config={
+        objective_config=objective_config
+        or {
             "metric": "sharpe",
             "penalize_no_trades": -1.0,
             "min_trades": 1,
             "enforce_fast_slow_gap": True,
         },
-        study_config={
+        study_config=study_config
+        or {
             "sampler": "random",
             "sampler_kwargs": {"seed": 42},
             "pruner": "none",
@@ -529,6 +533,50 @@ def test_objective_penalizes_sharpe_none(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert value == optimizer.penalty_value
 
 
+def test_objective_multi_returns_tuple_and_skips_prune(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    stub_data_manager: None,
+) -> None:
+    """Le mode multi doit renvoyer un tuple et ignorer le pruning/report."""
+
+    objective_cfg = {
+        "mode": "multi",
+        "targets": [
+            {"name": "sharpe", "direction": "maximize"},
+            {"name": "max_drawdown", "direction": "minimize"},
+        ],
+        "penalize_no_trades": -2.0,
+        "min_trades": 1,
+        "enforce_fast_slow_gap": False,
+    }
+
+    optimizer = _make_optimizer(tmp_path, objective_config=objective_cfg)
+
+    class _Engine:
+        def __init__(self) -> None:
+            self.result = _make_strategy_result(10_500.0, total_trades=5, sharpe_ratio=0.9)
+
+        def add_strategy(self, *_: Any, **__: Any) -> None:
+            return
+
+        def run(self) -> list[Any]:
+            return [self.result]
+
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
+    monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
+
+    trial = _ObjectiveTrialStub(should_prune=True)
+    value = optimizer.objective(trial)
+
+    assert isinstance(value, tuple)
+    assert value[0] == pytest.approx(0.9, rel=1e-9)
+    assert value[1] == pytest.approx(2.5, rel=1e-9)
+    assert trial.report_calls == []  # multi => pas de report()
+    assert trial.user_attrs["objective"][0] == pytest.approx(0.9, rel=1e-9)
+    assert trial.user_attrs["objective"][1] == pytest.approx(2.5, rel=1e-9)
+
+
 def test_objective_handles_pruning(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, stub_data_manager: None) -> None:
     """Si should_prune() retourne True, TrialPruned est levée."""
 
@@ -602,6 +650,43 @@ def test_build_sampler_variants(monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
         optimizer._build_sampler()
 
 
+def test_build_sampler_nsga2_injects_constraints(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    stub_data_manager: None,
+) -> None:
+    """En mode multi, nsga2 doit recevoir constraints_func."""
+
+    objective_cfg = {
+        "mode": "multi",
+        "targets": [
+            {"name": "sharpe", "direction": "maximize"},
+            {"name": "max_drawdown", "direction": "minimize"},
+        ],
+        "constraints": {"min_trades": 5},
+    }
+
+    optimizer = _make_optimizer(tmp_path, objective_config=objective_cfg)
+    optimizer.study_config = {"sampler": "nsga2", "sampler_kwargs": {}}
+
+    captured: Dict[str, Any] = {}
+
+    class _DummySampler:
+        pass
+
+    def _fake_nsga(**kwargs: Any) -> _DummySampler:
+        captured.update(kwargs)
+        return _DummySampler()
+
+    monkeypatch.setattr(optuna.samplers, "NSGAIISampler", _fake_nsga)
+
+    sampler = optimizer._build_sampler()
+
+    assert isinstance(sampler, _DummySampler)
+    assert "constraints_func" in captured
+    assert callable(captured["constraints_func"])
+
+
 def test_build_pruner_variants(tmp_path: Path, stub_data_manager: None) -> None:
     """_build_pruner doit couvrir les cas supportés."""
 
@@ -644,6 +729,46 @@ def test_create_study_with_storage(tmp_path: Path, stub_data_manager: None) -> N
     assert db_path.exists()
 
 
+def test_create_study_multi_uses_directions(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, stub_data_manager: None
+) -> None:
+    """En mode multi, create_study doit passer 'directions'."""
+
+    objective_cfg = {
+        "mode": "multi",
+        "targets": [
+            {"name": "sharpe", "direction": "maximize"},
+            {"name": "max_drawdown", "direction": "minimize"},
+        ],
+    }
+
+    optimizer = _make_optimizer(tmp_path, objective_config=objective_cfg)
+    optimizer.study_config = {
+        "study_name": "multi",
+        "storage": None,
+        "sampler": "none",
+        "pruner": "none",
+        "load_if_exists": True,
+    }
+
+    captured: Dict[str, Any] = {}
+
+    def _fake_create_study(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+
+        class _StubStudy:
+            study_name = kwargs.get("study_name")
+
+        return _StubStudy()
+
+    monkeypatch.setattr(optuna, "create_study", _fake_create_study)
+
+    study = optimizer._create_study()
+
+    assert isinstance(study, object)
+    assert captured["directions"] == ["maximize", "minimize"]
+    assert "direction" not in captured
+
 def test_handle_outputs_writes_files(tmp_path: Path, stub_data_manager: None) -> None:
     """_handle_outputs doit générer les artifacts attendus."""
 
@@ -671,6 +796,41 @@ def test_handle_outputs_writes_files(tmp_path: Path, stub_data_manager: None) ->
     assert (tmp_path / "out" / "study.pkl").exists()
     assert (tmp_path / "out" / "trials.csv").exists()
     assert (tmp_path / "out" / "best.yaml").exists()
+
+
+def test_dump_best_params_multi(tmp_path: Path, stub_data_manager: None) -> None:
+    """En mode multi, dump_best_params doit écrire le front complet."""
+
+    objective_cfg = {
+        "mode": "multi",
+        "targets": [
+            {"name": "sharpe", "direction": "maximize"},
+            {"name": "max_drawdown", "direction": "minimize"},
+        ],
+    }
+
+    optimizer = _make_optimizer(tmp_path, objective_config=objective_cfg)
+    optimizer.output_config = {"best_params_path": str(tmp_path / "multi.yaml")}
+
+    class _TrialStub:
+        def __init__(self, number: int, values: tuple[float, ...], params: Dict[str, Any]) -> None:
+            self.number = number
+            self.values = values
+            self.params = params
+
+    class _StudyStub:
+        def __init__(self) -> None:
+            self.best_trials = [
+                _TrialStub(1, (0.8, 0.2), {"fast": 5}),
+                _TrialStub(2, (0.7, 0.15), {"fast": 7}),
+            ]
+
+    optimizer._dump_best_params(_StudyStub())
+
+    assert (tmp_path / "multi.yaml").exists()
+    content = (tmp_path / "multi.yaml").read_text(encoding="utf-8")
+    assert "objectives" in content
+    assert "trial_number" in content
 
 
 def test_save_study_without_path(tmp_path: Path, stub_data_manager: None) -> None:

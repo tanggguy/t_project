@@ -1,0 +1,54 @@
+======================================================================
+RÉSULTATS DU BACKTEST
+======================================================================
+
+Stratégie: EmaTrend
+Ticker: AAPL
+Période: 2018-01-02 à 2025-10-31
+Capital Initial: 25,000.00 €
+Capital Final: 26,654.97 €
+
+Configuration:
+backtest:
+  strategy: EmaTrend
+  strategy_params:
+    ema_trend: 200
+    ema_fast: 12
+    ema_slow: 26
+    use_stop_loss: true
+    stop_loss_type: atr
+    stop_loss_atr_mult: 2.5
+    use_take_profit: true
+    take_profit_type: atr
+    take_profit_atr_mult: 5.0
+    atr_period: 14
+  portfolio:
+    alignment: intersection
+    per_ticker_reports: true
+  data:
+    tickers:
+    - AAPL
+    - MSFT
+    - NVDA
+    start_date: '2018-01-01'
+    end_date: '2025-11-01'
+    interval: 1d
+  broker:
+    initial_capital: 25000.0
+    commission_pct: 0.0005
+    slippage_pct: 0.0005
+  position_sizing:
+    enabled: true
+    method: fixed
+    fixed:
+      pct_size: 0.4
+  output:
+    plot: true
+    save_results: true
+    results_dir: results/backtests
+    verbose: true
+    report:
+      enable: true
+      out_dir: reports/generated
+      template: default.html
+      include_trades: true

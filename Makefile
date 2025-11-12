@@ -24,7 +24,7 @@ python scripts/run_backtest.py --config config/backtest_configRsiOversold.yaml
 
 python scripts/run_backtest.py --config config/backtest_config1111.yaml
 python scripts/run_backtest.py --config config/backtest_configSmaPullbackManaged.yaml
-
+python scripts/run_backtest.py --config config/backtest_configEmaTrendStrategy.yaml
 
 Avec le script helper :
 ./run_backtest.sh config/backtest_config.yaml
@@ -38,6 +38,7 @@ python scripts/run_optimization.py --config config/optimization_SimpleMaManaged.
 python scripts/run_optimization.py --config config/optimization_RsiMeanReversionManaged.yaml 
 python scripts/run_optimization.py --config config/optimization_SmaPullbackManaged.yaml 
 python scripts/run_optimization.py --config config/optimization_RsiOversold.yaml 
+python scripts/run_optimization.py --config config/optimization_EmaTrend.yaml 
 
 
 

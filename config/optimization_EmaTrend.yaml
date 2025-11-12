@@ -1,0 +1,101 @@
+optimization:
+  strategy:
+    name: "EmaTrend"
+    module: "strategies.implementations.ema_trend_strategy"
+    class_name: "EmaTrendStrategy"
+    fixed_params:
+      use_stop_loss: true
+      stop_loss_type: "atr"
+      use_take_profit: true
+      take_profit_type: "atr"
+    param_space:
+      ema_trend: [150, 300, 10]
+      ema_fast: [8, 20, 1]
+      ema_slow: [20, 40, 2]
+      stop_loss_atr_mult:
+        type: "float"
+        low: 2.0
+        high: 3.5
+        step: 0.25
+      take_profit_atr_mult:
+        type: "float"
+        low: 4.0
+        high: 6.0
+        step: 0.25
+      atr_period: [10, 20, 1]
+
+  data:
+    tickers:
+      - "AAPL"
+      - "MSFT"
+      - "GOOG"
+      - "JPM"
+      - "XOM"
+
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"
+    use_cache: true
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.0005
+    slippage_pct: 0.0005
+
+  position_sizing:
+    enabled: false
+    method: "fixed"
+    fixed:
+      pct_size: 0.4
+
+  objective:
+    # mode: "single" (par défaut) -> renvoie un score unique
+    # mode: "multi" -> renvoie un tuple pour des objectifs contradictoires
+    mode: "single"
+
+    # SINGLE-OBJECTIVE:
+    #   aggregation: "metric" (défaut) -> utiliser la clé 'metric'
+    #   aggregation: "weighted_sum" -> combiner plusieurs métriques avec 'weights'
+    metric: "sharpe"                   # Aliases pris en charge: sharpe, sortino, cagr, calmar, pnl, etc.
+    aggregation: "metric"
+    # weights:
+    #   sharpe: 1.0
+    #   max_drawdown: -0.5             # Négatif = pénalise (réduction du score)
+
+    # MULTI-OBJECTIVE:
+    # targets:
+    #   - name: "sharpe"
+    #     direction: "maximize"
+    #   - name: "max_drawdown"
+    #     direction: "minimize"
+    # penalize_no_trades: -2.0
+    # min_trades: 5
+    # enforce_fast_slow_gap: true
+    # constraints:
+    #   min_trades: 5
+    #   max_drawdown: 0.30
+    #   fast_slow_gap: 1
+
+  study:
+    study_name: "ema_trend_opt{23h20/12/11/2025}}"
+    direction: "maximize"
+    storage: "sqlite:///results/optimization/optuna_studies.db"
+    load_if_exists: true
+    sampler: "nsga2"
+    sampler_kwargs:
+      seed: 42
+    pruner: "none"
+    pruner_kwargs: {}
+    n_trials: 60
+    timeout: null
+    n_jobs: -1
+    show_progress_bar: true
+
+  output:
+    save_study: true
+    study_path: "results/optimization/ema_trend_opt.pkl"
+    save_trials_csv: true
+    trials_csv_path: "results/optimization/ema_trend_opt_trials.csv"
+    log_file: "logs/optimization/optuna_optimizer.log"
+    dump_best_params: true
+    best_params_path: "results/optimization/ema_trend_opt_best_params.yaml"

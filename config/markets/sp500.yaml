@@ -1,14 +1,98 @@
 # config/markets/sp500.yaml
-# Échantillon des tickers du S&P 500 pour les tests
+# Liste de tickers S&P 500 regroupés par secteur principal (GICS approx.)
+# Utile pour lancer des backtests sectoriels ciblés ou construire des paniers multi-actifs.
 
 tickers:
-  - "AAPL"  # Apple
-  - "MSFT"  # Microsoft
-  - "GOOGL" # Google
-  - "AMZN"  # Amazon
-  - "NVDA"  # NVIDIA
-  - "TSLA"  # Tesla
-  - "META"  # Meta Platforms
-  - "BRK-B" # Berkshire Hathaway
-  - "JPM"   # JPMorgan Chase
-  - "JNJ"   # Johnson & Johnson
+  # --- Information Technology ---
+  - "AAPL"   # Apple Inc.
+  - "MSFT"   # Microsoft Corporation
+  - "NVDA"   # NVIDIA Corporation
+  - "AVGO"   # Broadcom Inc.
+  - "CRM"    # Salesforce Inc.
+  - "ADBE"   # Adobe Inc.
+  - "CSCO"   # Cisco Systems Inc.
+  - "INTC"   # Intel Corporation
+
+  # --- Communication Services ---
+  - "GOOGL"  # Alphabet Inc. (Class A)
+  - "META"   # Meta Platforms Inc.
+  - "NFLX"   # Netflix Inc.
+  - "TMUS"   # T-Mobile US Inc.
+  - "DIS"    # Walt Disney Company
+  - "CMCSA"  # Comcast Corporation
+
+  # --- Consumer Discretionary ---
+  - "AMZN"   # Amazon.com Inc.
+  - "TSLA"   # Tesla Inc.
+  - "HD"     # Home Depot Inc.
+  - "MCD"    # McDonald's Corporation
+  - "NKE"    # NIKE Inc.
+  - "SBUX"   # Starbucks Corporation
+  - "LOW"    # Lowe's Companies Inc.
+
+  # --- Consumer Staples ---
+  - "PG"     # Procter & Gamble Company
+  - "KO"     # Coca-Cola Company
+  - "PEP"    # PepsiCo Inc.
+  - "COST"   # Costco Wholesale Corporation
+  - "WMT"    # Walmart Inc.
+  - "MDLZ"   # Mondelez International Inc.
+
+  # --- Health Care ---
+  - "JNJ"    # Johnson & Johnson
+  - "UNH"    # UnitedHealth Group Incorporated
+  - "PFE"    # Pfizer Inc.
+  - "ABBV"   # AbbVie Inc.
+  - "MRK"    # Merck & Co. Inc.
+  - "ABT"    # Abbott Laboratories
+  - "TMO"    # Thermo Fisher Scientific Inc.
+
+  # --- Financials ---
+  - "JPM"    # JPMorgan Chase & Co.
+  - "BAC"    # Bank of America Corporation
+  - "WFC"    # Wells Fargo & Company
+  - "GS"     # Goldman Sachs Group Inc.
+  - "MS"     # Morgan Stanley
+  - "V"      # Visa Inc.
+  - "MA"     # Mastercard Incorporated
+
+  # --- Industrials ---
+  - "HON"    # Honeywell International Inc.
+  - "CAT"    # Caterpillar Inc.
+  - "GE"     # General Electric Company
+  - "UNP"    # Union Pacific Corporation
+  - "UPS"    # United Parcel Service Inc.
+  - "BA"     # Boeing Company
+  - "LMT"    # Lockheed Martin Corporation
+
+  # --- Energy ---
+  - "XOM"    # Exxon Mobil Corporation
+  - "CVX"    # Chevron Corporation
+  - "COP"    # ConocoPhillips
+  - "SLB"    # Schlumberger Limited
+  - "EOG"    # EOG Resources Inc.
+  - "PSX"    # Phillips 66
+
+  # --- Materials ---
+  - "LIN"    # Linde plc
+  - "APD"    # Air Products & Chemicals Inc.
+  - "NEM"    # Newmont Corporation
+  - "FCX"    # Freeport-McMoRan Inc.
+  - "DOW"    # Dow Inc.
+  - "SHW"    # Sherwin-Williams Company
+
+  # --- Utilities ---
+  - "NEE"    # NextEra Energy Inc.
+  - "SO"     # Southern Company
+  - "DUK"    # Duke Energy Corporation
+  - "EXC"    # Exelon Corporation
+  - "AEP"    # American Electric Power Company
+  - "SRE"    # Sempra Energy
+
+  # --- Real Estate ---
+  - "PLD"    # Prologis Inc.
+  - "AMT"    # American Tower Corporation
+  - "EQIX"   # Equinix Inc.
+  - "SPG"    # Simon Property Group Inc.
+  - "CCI"    # Crown Castle Inc.
+  - "O"      # Realty Income Corporation
