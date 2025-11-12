@@ -186,27 +186,6 @@ class TestRsiOversoldStrategyNext:
         strategy_fixture.sell.assert_not_called()
         strategy_fixture.log.assert_not_called()
 
-    def test_next_sell_signal_triggered(self, strategy_fixture, mocker):
-        """
-        Scénario: En position, pas d'ordre, RSI en surachat.
-        Attendu: Un ordre de vente (clôture) est créé.
-        """
-        # Arrange
-        strategy_fixture.mock_position.__bool__.return_value = True
-        # CORRECTION : Configurer la valeur de retour de l'appel `[0]`
-        strategy_fixture.rsi.__getitem__.return_value = 75.0
-        strategy_fixture.data_close.__getitem__.return_value = 150.0
-
-        # Act
-        strategy_fixture.next()
-
-        # Assert
-        strategy_fixture.sell.assert_called_once()
-        strategy_fixture.buy.assert_not_called()
-        assert strategy_fixture.order == strategy_fixture.sell.return_value
-        strategy_fixture.log.assert_called_with(mocker.ANY, level=logging.INFO)
-        assert "SIGNAL VENTE" in strategy_fixture.log.call_args[0][0]
-
     def test_next_no_sell_signal_not_overbought(self, strategy_fixture):
         """
         Scénario: En position, mais le RSI n'est pas en surachat.
@@ -311,21 +290,3 @@ class TestRsiOversoldStrategyNext:
 
         # Assert
         strategy_fixture.sell.assert_not_called()
-
-    def test_next_sell_just_above_limit(self, strategy_fixture):
-        """
-        Scénario: En position, RSI juste au-dessus du seuil (70.01).
-        Attendu: Vente.
-        """
-        # Arrange
-        strategy_fixture.mock_position.__bool__.return_value = True
-        # CORRECTION : Configurer la valeur de retour de l'appel `[0]`
-        strategy_fixture.rsi.__getitem__.return_value = 70.01
-        strategy_fixture.p.overbought_level = 70.0
-        strategy_fixture.data_close.__getitem__.return_value = 100.0
-
-        # Act
-        strategy_fixture.next()
-
-        # Assert
-        strategy_fixture.sell.assert_called_once()

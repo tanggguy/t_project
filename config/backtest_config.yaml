@@ -1,6 +1,5 @@
 # ========================================
 # Configuration du Backtest
-# Compatible avec votre structure existante
 # ========================================
 backtest:
   # Nom de la stratégie à utiliser
@@ -75,10 +74,27 @@ backtest:
       atr_multiplier: 2.0  # Multiplicateur de l'ATR pour le stop
 
   # ========================================
+  # Portfolio multi-ticker (optionnel)
+  # ========================================
+  portfolio:
+    alignment: "intersection"    # intersection ou union pour l'alignement des dates
+    per_ticker_reports: true     # Générer aussi les rapports individuels
+
+  # ========================================
   # Données à charger
   # ========================================
   data:
-    ticker: "AAPL"
+    # ticker: "AAPL"
+    # Pour activer le mode multi-ticker, renseignez la liste ci-dessous
+    tickers:
+      - "AAPL"
+      - "MSFT"
+      - "GOOG"
+    # Optionnel : poids (liste ou mapping). Par défaut, pondération égale.
+    # weights:
+    #   AAPL: 0.4
+    #   MSFT: 0.4
+    #   GOOG: 0.2
     
     # Option 1: Période relative (décommentez pour utiliser)
     # period: "2y"  # 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max

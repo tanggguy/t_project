@@ -1,3 +1,4 @@
+
 Structure détaillée du projet
 t_project/
 │
@@ -42,10 +43,10 @@ t_project/
 │
 ├── utils/
 │   ├── __init__.py
-│   ├── data_manager.py          # Gestion données yfinance 
+│   ├── data_manager.py          # Gestion données yfinance
 │   ├── logger.py                # Logging personnalisé
 │   ├── config_loader.py         # Chargement configurations
-│   ├── data_processor.py        # Calcul des returns  Détection et gestion des outliers  Resampling 
+│   ├── data_processor.py        # Calcul des returns  Détection et gestion des outliers  Resampling
 │   └── market_calendar.py       # Jours de trading
 │
 ├── visualization/
@@ -74,10 +75,19 @@ t_project/
 │   ├── 03_backtest_analysis.ipynb
 │   └── 04_optimization_results.ipynb
 │
-├── tests/
+ ├── tests/
 │   ├── unit/                     # Tests unitaires
 │   ├── integration/              # Tests d'intégration
 │   └── fixtures/                 # Données de test
+
+## Mode multi-ticker (batch)
+
+- Ajoutez `data.tickers` dans `config/backtest_config.yaml` (et optionnellement `weights`) pour exécuter un backtest
+  par symbole, puis agréger automatiquement les rendements (pondérés).
+- La section `backtest.portfolio` permet de contrôler l'alignement temporel (`intersection` ou `union`) et de décider
+  si des rapports individuels doivent être générés (`per_ticker_reports`).
+- Côté optimisation (`config/optimization_*.yaml`), la même configuration `data.tickers` + `portfolio` active une
+  évaluation multi-actifs avec objectif calculé sur la série de rendements agrégée (Sharpe portefeuille).
 │
 ├── logs/
 │   ├── backtest/
@@ -127,9 +137,6 @@ Backtest via scripts/run_backtest.py
 Optimisation avec Optuna
 Analyse des résultats
 Rapport automatique
-
-
-
 
 visualization/
 ├── __init__.py

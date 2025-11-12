@@ -8,6 +8,7 @@ import inspect
 import sys
 from pathlib import Path
 from typing import Any, Dict, Type
+import logging
 
 # --- 2. Bibliothèques tierces ---
 import yaml
@@ -29,7 +30,9 @@ from strategies.base_strategy import BaseStrategy
 from utils.logger import setup_logger
 
 
-logger = setup_logger(__name__, log_file="logs/optimization/run_optimization.log")
+logger = setup_logger(
+    __name__, log_file="logs/optimization/run_optimization.log", level=logging.ERROR
+)
 
 
 def load_config(path: str) -> Dict[str, Any]:
@@ -91,9 +94,7 @@ def resolve_strategy(
         module = importlib.import_module(module_path)
         strategy_class = getattr(module, class_name)
         if not issubclass(strategy_class, BaseStrategy):
-            raise TypeError(
-                f"{module_path}:{class_name} n'hérite pas de BaseStrategy"
-            )
+            raise TypeError(f"{module_path}:{class_name} n'hérite pas de BaseStrategy")
         return strategy_class
 
     name = strategy_cfg.get("name")
@@ -120,6 +121,7 @@ def build_optimizer(config: Dict[str, Any]) -> OptunaOptimizer:
     sizing_cfg = optimization_cfg.get("position_sizing") or {}
     objective_cfg = optimization_cfg.get("objective") or {}
     study_cfg = optimization_cfg.get("study") or {}
+    portfolio_cfg = optimization_cfg.get("portfolio") or {}
     output_cfg = optimization_cfg.get("output") or {}
 
     available_strategies = discover_strategies()
@@ -142,6 +144,7 @@ def build_optimizer(config: Dict[str, Any]) -> OptunaOptimizer:
         position_sizing_config=sizing_cfg,
         objective_config=objective_cfg,
         study_config=study_cfg,
+        portfolio_config=portfolio_cfg,
         output_config=output_cfg,
     )
 

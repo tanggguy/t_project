@@ -280,15 +280,17 @@ TODO COMPLET - Projet Trading Python
  Patterns gagnants/perdants
  Analyse par période -->
 
-🚀 Phase 9 : Optimisation Avancée (Semaine 8-9)
-9.1 Overfitting prevention
+<!-- 🚀 Phase 9 : Optimisation Avancée (Semaine 8-9) -->
+<!-- 9.1 Overfitting prevention
 
  Créer optimization/overfitting_check.py :
 
  Walk-forward analysis
  Out-of-sample testing
  Monte Carlo simulation
- Stability tests
+ Stability tests -->
+
+<!-- esquisser scripts/run_overfitting.py prêt à l’emploi, -->
 
 9.2 Multi-objective
 
@@ -305,13 +307,6 @@ TODO COMPLET - Projet Trading Python
  Ensemble de paramètres
 
 🏗️ Phase 10 : Stratégies Avancées (Semaine 9-10)
-10.1 Multi-timeframe
-
- Créer strategies/implementations/multi_timeframe.py :
-
- Confirmation sur timeframe supérieur
- Entry sur timeframe inférieur
- Synchronisation des signaux
 
 10.2 Stratégies complexes
 
@@ -326,13 +321,13 @@ TODO COMPLET - Projet Trading Python
  Labeling des données
  Setup pour ML (optionnel)
 
-🧪 Phase 11 : Testing et Validation (Semaine 10-11)
+<!-- 🧪 Phase 11 : Testing et Validation (Semaine 10-11)
 11.1 Unit tests
 
  Tests pour data_manager
  Tests pour strategies
  Tests pour risk management
- Tests pour indicators
+ Tests pour indicators -->
 
 11.2 Integration tests
 

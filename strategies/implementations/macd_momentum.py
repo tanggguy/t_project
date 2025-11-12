@@ -116,4 +116,4 @@ class MacdMomentumStrategy(BaseStrategy):
                     level=logging.INFO,
                 )
                 # Créer un ordre de vente (fermer la position)
-                self.order = self.sell()
+                self.order = self.close()

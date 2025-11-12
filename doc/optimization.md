@@ -57,6 +57,21 @@ optimization:
     interval: "1d"
     use_cache: true
 
+  # Mode multi-ticker (facultatif)
+  # data:
+  #   tickers:
+  #     - "AAPL"
+  #     - "MSFT"
+  #   weights:
+  #     AAPL: 0.4
+  #     MSFT: 0.6
+  #   start_date: "2018-01-01"
+  #   end_date: "2025-11-01"
+
+  # Agrégation portefeuille (alignement des dates, rapports par ticker)
+  portfolio:
+    alignment: "intersection"
+
   broker:
     initial_capital: 10000.0
     commission_pct: 0.001
@@ -98,6 +113,12 @@ optimization:
     dump_best_params: true
     best_params_path: "results/optimization/sma_managed_opt_best_params.yaml"
 ```
+
+> ℹ️ **Mode multi-ticker** — lorsque `data.tickers` est présent, chaque ticker est
+> backtesté dans un run indépendant, puis les rendements sont agrégés selon les
+> `weights` (ou pondération égale par défaut). La section `portfolio` contrôle la
+> façon d'aligner les dates (`intersection` / `union`) et reste facultative pour
+> les configurations mono-ticker.
 
 ### Remarques
 - `param_space` accepte :

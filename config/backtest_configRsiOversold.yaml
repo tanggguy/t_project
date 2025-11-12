@@ -6,11 +6,14 @@ backtest:
 
   strategy_params:
     rsi_period: 14
-    oversold_level: 30
-    overbought_level: 70
+    oversold_level: 40
+    overbought_level: 75
 
   data:
-    ticker: "AAPL"
+    tickers:
+      - "AAPL"
+      - "MSFT"
+      - "GOOG"
     start_date: "2015-01-01"
     end_date: "2025-11-01"
 
@@ -23,7 +26,7 @@ backtest:
     enabled: true
     method: "fixed"
     fixed:
-      pct_size: 0.5
+      pct_size: 0.3
 
   output:
     plot: true

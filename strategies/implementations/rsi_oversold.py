@@ -88,12 +88,14 @@ class RsiOversoldStrategy(BaseStrategy):
 
         # --- Cas 2: Position ouverte -> Chercher VENTE ---
         else:
-            # Signal de vente: RSI dépasse le seuil overbought
+            # Signal de sortie: RSI dépasse le seuil overbought
             if current_rsi > self.p.overbought_level:
                 self.log(
-                    f"SIGNAL VENTE - RSI: {current_rsi:.2f} > {self.p.overbought_level} "
+                    f"SIGNAL SORTIE - RSI: {current_rsi:.2f} > {self.p.overbought_level} "
                     f"(Prix: {current_price:.2f})",
                     level=logging.INFO,
                 )
-                # Créer un ordre de vente (fermer la position)
-                self.order = self.sell()
+                # Important: fermer la position en cours sans ouvrir de short
+                # Avec un sizer personnalisé, 'sell()' peut ouvrir une position short
+                # si aucune taille n'est précisée. 'close()' ferme proprement la position.
+                self.order = self.close()

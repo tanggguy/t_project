@@ -29,9 +29,16 @@ import pandas as pd
 from backtesting.analyzers import drawdown as drawdown_analyzer
 from backtesting.analyzers import performance as performance_analyzer
 from backtesting.engine import BacktestEngine
+from backtesting.portfolio import (
+    aggregate_weighted_returns,
+    compute_portfolio_metrics,
+    normalize_weights,
+)
 from optimization.optuna_optimizer import ParameterSpec
+from reports import overfitting_report
 from strategies.base_strategy import BaseStrategy
 from utils.data_manager import DataManager
+from utils.config_loader import get_settings
 from utils.logger import setup_logger
 
 
@@ -40,12 +47,13 @@ logger = setup_logger(__name__, level=logging.ERROR)
 
 @dataclass
 class BacktestResult:
-    """Résultat consolidé d'un backtest unique."""
+    """Résultat consolidé d'un backtest (mono ou multi-ticker)."""
 
     metrics: Dict[str, Any]
     returns: pd.Series
     equity: pd.Series
     trades: pd.DataFrame
+    per_ticker: Optional[Dict[str, "BacktestResult"]] = None
 
 
 class OverfittingChecker:
@@ -92,13 +100,28 @@ class OverfittingChecker:
             self.optimization_config.get("enforce_fast_slow_gap", True)
         )
 
-        self.data = self._init_data(data)
+        self.data_frames = self._init_data_frames(data)
+        self.tickers = list(self.data_frames.keys())
+        if not self.tickers:
+            raise ValueError("Aucune donnée n'a pu être chargée pour l'analyse.")
+
+        self.primary_ticker = self.tickers[0]
+        self.data = self.data_frames[self.primary_ticker]
+        self.multi_ticker = len(self.tickers) > 1
+        self.weights = normalize_weights(
+            self.tickers, self.data_config.get("weights")
+        )
+        self.portfolio_alignment = str(
+            self.data_config.get("alignment", "intersection")
+        ).lower()
+        self.analytics_settings = self._load_analytics_settings()
 
         self.run_id = run_id or self.strategy_class.__name__.lower()
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         base_output = Path(output_dir or "results/overfitting")
         self.output_root = base_output / self.run_id / timestamp
         self.output_root.mkdir(parents=True, exist_ok=True)
+        self._report_sections: List[Dict[str, str]] = []
 
         logger.info(
             "OverfittingChecker initialisé (run_id=%s, sorties=%s)",
@@ -174,8 +197,11 @@ class OverfittingChecker:
                 test_slice.index.max(),
             )
 
+            train_dataset = self._slice_dataset(
+                train_slice.index.min(), train_slice.index.max()
+            )
             study = self._run_optuna(
-                train_slice,
+                train_dataset,
                 space,
                 study_name=f"{self.run_id}_{fold_id}",
             )
@@ -183,11 +209,18 @@ class OverfittingChecker:
                 "strategy_params", study.best_params
             )
 
-            train_result = self._run_backtest(train_slice, best_params)
-            test_result = self._run_backtest(test_slice, best_params)
+            train_result = self._run_backtest(train_dataset, best_params)
+            test_dataset = self._slice_dataset(
+                test_slice.index.min(), test_slice.index.max()
+            )
+            test_result = self._run_backtest(test_dataset, best_params)
 
-            train_sharpes.append(train_result.metrics.get("sharpe_ratio", 0.0))
-            test_sharpes.append(test_result.metrics.get("sharpe_ratio", 0.0))
+            train_sharpes.append(
+                self._as_float(train_result.metrics.get("sharpe_ratio"))
+            )
+            test_sharpes.append(
+                self._as_float(test_result.metrics.get("sharpe_ratio"))
+            )
 
             fold_results.append(
                 {
@@ -237,8 +270,8 @@ class OverfittingChecker:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         for idx, (start, end) in enumerate(oos_windows, start=1):
-            subset = self._filter_data(start, end)
-            if subset.empty:
+            subset = self._slice_dataset(start, end)
+            if self._is_dataset_empty(subset):
                 logger.warning(
                     "Fenêtre OOS ignorée (vide) %s -> %s",
                     start.isoformat(),
@@ -250,8 +283,8 @@ class OverfittingChecker:
             results.append(
                 {
                     "window_id": f"oos_{idx:02d}",
-                    "start": subset.index.min(),
-                    "end": subset.index.max(),
+                    "start": start,
+                    "end": end,
                     "metrics": bt_result.metrics,
                 }
             )
@@ -259,7 +292,9 @@ class OverfittingChecker:
         if not results:
             raise ValueError("Aucun test OOS n'a pu être exécuté.")
 
-        sharpe_values = [entry["metrics"].get("sharpe_ratio", 0.0) for entry in results]
+        sharpe_values = [
+            self._as_float(entry["metrics"].get("sharpe_ratio")) for entry in results
+        ]
         summary = {
             "oos_sharpe_mean": float(np.mean(sharpe_values)),
             "oos_sharpe_std": (
@@ -284,8 +319,9 @@ class OverfittingChecker:
     ) -> Dict[str, Any]:
         """Monte-Carlo bootstrap sur les retours ou les trades."""
 
-        dataset = data if data is not None else self.data
+        dataset = data if data is not None else self._slice_dataset(None, None)
         base_result = self._run_backtest(dataset, params)
+        initial_capital = float(base_result.metrics.get("initial_capital", 1.0))
 
         if source not in {"returns", "trades"}:
             raise ValueError("source doit être 'returns' ou 'trades'.")
@@ -309,7 +345,10 @@ class OverfittingChecker:
                 )
             else:
                 sampled_returns = self._block_bootstrap_trades(
-                    trades_df, block_size=block_size, rng=rng
+                    trades_df,
+                    block_size=block_size,
+                    rng=rng,
+                    capital=initial_capital,
                 )
 
             sim_metrics = self._compute_metrics_from_returns(sampled_returns)
@@ -349,7 +388,7 @@ class OverfittingChecker:
 
         dataset = data if data is not None else self.data
         base_result = self._run_backtest(dataset, base_params)
-        base_metric = base_result.metrics.get("sharpe_ratio", 0.0)
+        base_metric = self._as_float(base_result.metrics.get("sharpe_ratio"))
 
         variations = self._generate_param_variations(
             base_params, perturbation=perturbation, steps=steps
@@ -395,31 +434,90 @@ class OverfittingChecker:
     # ------------------------------------------------------------------ #
     # Implémentation interne
     # ------------------------------------------------------------------ #
-    def _init_data(self, data: Optional[pd.DataFrame]) -> pd.DataFrame:
+    def _init_data_frames(
+        self,
+        data: Optional[Union[pd.DataFrame, Dict[str, pd.DataFrame]]],
+    ) -> Dict[str, pd.DataFrame]:
         if data is not None:
-            df = data.copy()
+            if isinstance(data, pd.DataFrame):
+                return {"data0": self._validate_dataframe(data, label="data0")}
+            if isinstance(data, dict):
+                frames: Dict[str, pd.DataFrame] = {}
+                for key, df in data.items():
+                    if not isinstance(df, pd.DataFrame):
+                        raise TypeError(
+                            "Chaque entrée de data doit être un DataFrame pandas."
+                        )
+                    frames[str(key)] = self._validate_dataframe(df, label=str(key))
+                return frames
+            raise TypeError(
+                "data doit être un DataFrame ou un dictionnaire {ticker: DataFrame}."
+            )
+
+        if not self.data_config:
+            raise ValueError(
+                "data est None et data_config est vide : impossible de charger les données."
+            )
+
+        return self._load_data_frames_from_config()
+
+    def _load_data_frames_from_config(self) -> Dict[str, pd.DataFrame]:
+        tickers_cfg = self.data_config.get("tickers")
+        if tickers_cfg:
+            if isinstance(tickers_cfg, str):
+                tickers = [tickers_cfg]
+            else:
+                tickers = [str(t).strip() for t in tickers_cfg if str(t).strip()]
         else:
-            if not self.data_config:
+            ticker = self.data_config.get("ticker")
+            if not ticker:
                 raise ValueError(
-                    "data est None et data_config est vide : impossible de charger les données."
+                    "'ticker' ou 'tickers' doit être défini dans data_config."
                 )
-            manager = DataManager()
+            tickers = [str(ticker).strip()]
+
+        tickers = [t for t in tickers if t]
+        if not tickers:
+            raise ValueError("Aucun ticker valide fourni pour le chargement des données.")
+
+        if len(tickers) > 1 and not (
+            self.data_config.get("start_date") and self.data_config.get("end_date")
+        ):
+            raise ValueError(
+                "Le mode multi-ticker requiert 'start_date' et 'end_date' dans data_config."
+            )
+
+        manager = DataManager()
+        frames: Dict[str, pd.DataFrame] = {}
+        for ticker in tickers:
             df = manager.get_data(
-                ticker=self.data_config.get("ticker"),
+                ticker=ticker,
                 start_date=self.data_config.get("start_date"),
                 end_date=self.data_config.get("end_date"),
                 interval=self.data_config.get("interval"),
                 use_cache=self.data_config.get("use_cache", True),
             )
+            frames[ticker] = self._validate_dataframe(df, label=ticker)
 
+        return frames
+
+    def _validate_dataframe(self, df: Optional[pd.DataFrame], *, label: str) -> pd.DataFrame:
         if df is None or df.empty:
-            raise ValueError("Aucune donnée disponible pour l'analyse.")
+            raise ValueError(f"Aucune donnée disponible pour '{label}'.")
 
         if not isinstance(df.index, pd.DatetimeIndex):
-            raise ValueError("Le DataFrame doit avoir un DatetimeIndex.")
+            raise ValueError(
+                f"Le DataFrame '{label}' doit avoir un index de type DatetimeIndex."
+            )
 
-        df = df.sort_index()
-        return df
+        return df.sort_index()
+
+    def _load_analytics_settings(self) -> Dict[str, Any]:
+        try:
+            settings = get_settings()
+            return settings.get("analytics", {})
+        except Exception:
+            return {}
 
     def _filter_data(
         self, start_date: Optional[str], end_date: Optional[str]
@@ -430,6 +528,44 @@ class OverfittingChecker:
         if end_date:
             df = df.loc[: pd.Timestamp(end_date)]
         return df
+
+    def _slice_dataset(
+        self,
+        start: Optional[Union[str, pd.Timestamp]],
+        end: Optional[Union[str, pd.Timestamp]],
+    ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+        start_ts = pd.Timestamp(start) if start is not None else None
+        end_ts = pd.Timestamp(end) if end is not None else None
+
+        if not self.multi_ticker:
+            return self._slice_frame(self.data, start_ts, end_ts)
+
+        subsets: Dict[str, pd.DataFrame] = {}
+        for ticker, df in self.data_frames.items():
+            subset = self._slice_frame(df, start_ts, end_ts)
+            if not subset.empty:
+                subsets[ticker] = subset
+        return subsets
+
+    def _slice_frame(
+        self,
+        df: pd.DataFrame,
+        start: Optional[pd.Timestamp],
+        end: Optional[pd.Timestamp],
+    ) -> pd.DataFrame:
+        result = df
+        if start is not None:
+            result = result.loc[start:]
+        if end is not None:
+            result = result.loc[:end]
+        return result
+
+    def _is_dataset_empty(
+        self, dataset: Union[pd.DataFrame, Dict[str, pd.DataFrame]]
+    ) -> bool:
+        if isinstance(dataset, dict):
+            return not any(len(df) for df in dataset.values())
+        return dataset.empty
 
     def _build_anchored_folds(
         self,
@@ -475,7 +611,7 @@ class OverfittingChecker:
 
     def _run_optuna(
         self,
-        data_slice: pd.DataFrame,
+        data_slice: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
         param_space: Dict[str, ParameterSpec],
         *,
         study_name: str,
@@ -544,6 +680,15 @@ class OverfittingChecker:
         )
 
     def _run_backtest(
+        self,
+        data_slice: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
+        params: Dict[str, Any],
+    ) -> BacktestResult:
+        if isinstance(data_slice, dict):
+            return self._run_portfolio_backtest(data_slice, params)
+        return self._run_single_backtest(data_slice, params)
+
+    def _run_single_backtest(
         self, data_slice: pd.DataFrame, params: Dict[str, Any]
     ) -> BacktestResult:
         engine = BacktestEngine()
@@ -561,7 +706,9 @@ class OverfittingChecker:
         metrics = self._gather_metrics(strat)
         returns_series = self._extract_returns(strat)
         equity_series = self._build_equity_curve(
-            returns_series, metrics.get("initial_capital", 1.0)
+            returns_series,
+            metrics.get("initial_capital", 1.0),
+            fallback_index=data_slice.index.min() if len(data_slice) else None,
         )
         trades_df = self._extract_trades(strat)
 
@@ -571,6 +718,88 @@ class OverfittingChecker:
             equity=equity_series,
             trades=trades_df,
         )
+
+    def _run_portfolio_backtest(
+        self, dataset_map: Dict[str, pd.DataFrame], params: Dict[str, Any]
+    ) -> BacktestResult:
+        valid_results: Dict[str, BacktestResult] = {}
+        for ticker, df in dataset_map.items():
+            if df is None or df.empty:
+                continue
+            valid_results[ticker] = self._run_single_backtest(df, params)
+
+        if not valid_results:
+            raise ValueError("Aucun dataset valide disponible pour le backtest.")
+
+        if len(valid_results) == 1:
+            return next(iter(valid_results.values()))
+
+        returns_map = {
+            ticker: result.returns
+            for ticker, result in valid_results.items()
+            if not result.returns.empty
+        }
+        weight_keys = list(valid_results.keys())
+        weights = self.weights.reindex(weight_keys).fillna(0.0)
+        if not np.isfinite(weights.sum()) or float(weights.sum()) <= 0:
+            weights = normalize_weights(weight_keys)
+        aligned_returns = aggregate_weighted_returns(
+            returns_map,
+            weights=weights,
+            alignment=self.portfolio_alignment,
+        )
+        if aligned_returns.empty:
+            raise ValueError("Impossible de calculer les rendements agrégés du portefeuille.")
+
+        initial_capital = float(self.broker_config.get("initial_capital", 10000.0))
+        metrics, equity_curve, _, _ = compute_portfolio_metrics(
+            aligned_returns,
+            initial_capital,
+            self.analytics_settings,
+        )
+
+        metrics["initial_capital"] = initial_capital
+        total_trades = sum(
+            res.metrics.get("total_trades", 0) for res in valid_results.values()
+        )
+        won_trades = sum(
+            res.metrics.get("won_trades", 0) for res in valid_results.values()
+        )
+        lost_trades = sum(
+            res.metrics.get("lost_trades", 0) for res in valid_results.values()
+        )
+        metrics.update(
+            total_trades=total_trades,
+            won_trades=won_trades,
+            lost_trades=lost_trades,
+            per_ticker_metrics={ticker: res.metrics for ticker, res in valid_results.items()},
+        )
+
+        merged_trades = self._merge_trades(valid_results)
+        return BacktestResult(
+            metrics=metrics,
+            returns=aligned_returns,
+            equity=equity_curve,
+            trades=merged_trades,
+            per_ticker=valid_results,
+        )
+
+    def _merge_trades(self, per_ticker_results: Dict[str, BacktestResult]) -> pd.DataFrame:
+        frames: List[pd.DataFrame] = []
+        for ticker, result in per_ticker_results.items():
+            trades = result.trades
+            if trades is None or trades.empty:
+                continue
+            enriched = trades.copy()
+            if "ticker" not in enriched.columns:
+                enriched["ticker"] = ticker
+            else:
+                enriched["ticker"] = enriched["ticker"].fillna(ticker)
+            frames.append(enriched)
+
+        if not frames:
+            return pd.DataFrame()
+        return pd.concat(frames, ignore_index=True)
 
     def _configure_broker(self, engine: BacktestEngine) -> None:
         cfg = self.broker_config
@@ -716,6 +945,13 @@ class OverfittingChecker:
             return params["fast_period"] < params["slow_period"]
         return True
 
+    def _as_float(self, value: Any, default: float = 0.0) -> float:
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            return float(default)
+        return float(val) if np.isfinite(val) else float(default)
+
     def _gather_metrics(self, strat: BaseStrategy) -> Dict[str, Any]:
         metrics: Dict[str, Any] = {}
 
@@ -786,10 +1022,17 @@ class OverfittingChecker:
         return pd.DataFrame()
 
     def _build_equity_curve(
-        self, returns: pd.Series, initial_capital: float
+        self,
+        returns: pd.Series,
+        initial_capital: float,
+        *,
+        fallback_index: Optional[pd.Timestamp] = None,
     ) -> pd.Series:
         if returns.empty:
-            return pd.Series(data=[initial_capital], index=[self.data.index.min()])
+            index_value = fallback_index
+            if index_value is None:
+                index_value = self.data.index.min() if len(self.data) else pd.Timestamp.utcnow()
+            return pd.Series(data=[initial_capital], index=[index_value])
         cumulative = (1.0 + returns.fillna(0.0)).cumprod()
         equity = cumulative * float(initial_capital)
         return equity
@@ -836,6 +1079,7 @@ class OverfittingChecker:
         *,
         block_size: int,
         rng: np.random.Generator,
+        capital: float,
     ) -> pd.Series:
         if trades.empty:
             raise ValueError("Table de trades vide pour le bootstrap.")
@@ -844,8 +1088,8 @@ class OverfittingChecker:
         if pnl_col not in trades:
             raise ValueError("Impossible de trouver une colonne pnl pour le bootstrap.")
 
-        returns = trades[pnl_col].astype(float)
-        returns = returns / returns.abs().max() if returns.abs().max() else returns
+        capital = float(capital) if float(capital or 0.0) > 0 else 1.0
+        returns = trades[pnl_col].astype(float) / capital
         return self._block_bootstrap_series(returns, block_size=block_size, rng=rng)
 
     def _compute_metrics_from_returns(self, returns: pd.Series) -> Dict[str, float]:
@@ -921,6 +1165,43 @@ class OverfittingChecker:
 
         return variations
 
+    def _report_meta(self) -> Dict[str, Any]:
+        start = self.data.index.min() if len(self.data) else None
+        end = self.data.index.max() if len(self.data) else None
+        return {
+            "run_id": self.run_id,
+            "strategy": self.strategy_class.__name__,
+            "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "data_start": start.strftime("%Y-%m-%d") if isinstance(start, pd.Timestamp) else None,
+            "data_end": end.strftime("%Y-%m-%d") if isinstance(end, pd.Timestamp) else None,
+        }
+
+    def _register_report_section(
+        self,
+        *,
+        name: str,
+        description: str,
+        relative_path: str,
+    ) -> None:
+        entry = {
+            "name": name,
+            "description": description,
+            "path": relative_path,
+        }
+        # Remplacer si même path déjà présent
+        self._report_sections = [
+            sec for sec in self._report_sections if sec.get("path") != relative_path
+        ]
+        self._report_sections.append(entry)
+        try:
+            overfitting_report.render_overfitting_index(
+                meta=self._report_meta(),
+                sections=self._report_sections,
+                output_path=self.output_root / "index.html",
+            )
+        except Exception:  # pragma: no cover - fallback silencieux
+            logger.debug("Impossible de générer l'index overfitting.", exc_info=True)
+
     # ------------------------------------------------------------------ #
     # Export helpers
     # ------------------------------------------------------------------ #
@@ -967,13 +1248,31 @@ class OverfittingChecker:
         )
         summary_df.to_csv(out_dir / "wfa_summary.csv", index=False)
 
-        html_path = out_dir / "wfa_report.html"
-        html_content = self._build_html_report(
-            title="Walk-Forward Analysis",
-            summary_table=summary_df,
-            details_table=df,
+        report_path = out_dir / "wfa_report.html"
+        try:
+            overfitting_report.render_wfa_report(
+                summary_df=summary_df,
+                folds_df=df,
+                output_path=report_path,
+            )
+        except Exception:  # pragma: no cover - fallback HTML simple
+            logger.debug("Plotly/Jinja indisponible, fallback HTML basique.", exc_info=True)
+            html_content = self._build_html_report(
+                title="Walk-Forward Analysis",
+                summary_table=summary_df,
+                details_table=df,
+            )
+            report_path.write_text(html_content, encoding="utf-8")
+
+        try:
+            relative_path = report_path.relative_to(self.output_root)
+        except ValueError:
+            relative_path = Path(report_path.name)
+        self._register_report_section(
+            name="Walk-Forward Analysis",
+            description="Résultats train/test par fold et métriques agrégées.",
+            relative_path=str(relative_path).replace("\\", "/"),
         )
-        html_path.write_text(html_content, encoding="utf-8")
 
     def _export_oos_results(
         self,

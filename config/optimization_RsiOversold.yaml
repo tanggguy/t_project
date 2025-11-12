@@ -8,8 +8,15 @@ optimization:
       oversold_level: [35, 50, 5]
       overbought_level: [55, 80, 5]
 
+  portfolio:
+    alignment: "intersection"    # intersection ou union pour l'alignement des dates
+    per_ticker_reports: true     # Générer aussi les rapports individuels
+
   data:
-    ticker: "AAPL"
+    tickers:
+      - "AAPL"
+      - "MSFT"
+      - "GOOG"
     start_date: "2015-01-01"
     end_date: "2025-11-01"
     interval: "1d"

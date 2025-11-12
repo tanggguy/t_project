@@ -267,7 +267,7 @@ def test_optimize_runs_with_stub_engine(monkeypatch: pytest.MonkeyPatch, tmp_pat
         def run(self) -> list[_DummyStrategyResult]:
             return [_DummyStrategyResult(self.initial_capital * 1.1)]
 
-    def _fake_create_engine(self: OptunaOptimizer) -> _StubEngine:
+    def _fake_create_engine(self: OptunaOptimizer, *_, **__) -> _StubEngine:
         return _StubEngine(self.broker_config.get("initial_capital", 10_000.0))
 
     monkeypatch.setattr(OptunaOptimizer, "_create_engine", _fake_create_engine)
@@ -447,7 +447,7 @@ def test_objective_penalizes_no_results(monkeypatch: pytest.MonkeyPatch, tmp_pat
         def run(self) -> list[Any]:
             return []
 
-    monkeypatch.setattr(optimizer, "_create_engine", lambda: _Engine())
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
     monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
 
     trial = _ObjectiveTrialStub()
@@ -469,7 +469,7 @@ def test_objective_penalizes_on_exception(monkeypatch: pytest.MonkeyPatch, tmp_p
         def run(self) -> list[Any]:
             raise RuntimeError("boom")
 
-    monkeypatch.setattr(optimizer, "_create_engine", lambda: _Engine())
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
     monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
 
     trial = _ObjectiveTrialStub()
@@ -495,7 +495,7 @@ def test_objective_penalizes_min_trades(monkeypatch: pytest.MonkeyPatch, tmp_pat
         def run(self) -> list[Any]:
             return [self.result]
 
-    monkeypatch.setattr(optimizer, "_create_engine", lambda: _Engine())
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
     monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
 
     trial = _ObjectiveTrialStub()
@@ -520,7 +520,7 @@ def test_objective_penalizes_sharpe_none(monkeypatch: pytest.MonkeyPatch, tmp_pa
         def run(self) -> list[Any]:
             return [self.result]
 
-    monkeypatch.setattr(optimizer, "_create_engine", lambda: _Engine())
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
     monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
 
     trial = _ObjectiveTrialStub()
@@ -544,7 +544,7 @@ def test_objective_handles_pruning(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
         def run(self) -> list[Any]:
             return [self.result]
 
-    monkeypatch.setattr(optimizer, "_create_engine", lambda: _Engine())
+    monkeypatch.setattr(optimizer, "_create_engine", lambda *_, **__: _Engine())
     monkeypatch.setattr(optimizer, "_build_trial_params", lambda trial: {})
 
     trial = _ObjectiveTrialStub(should_prune=True)

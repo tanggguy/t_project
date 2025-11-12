@@ -9,7 +9,7 @@ de performance (par défaut le Sharpe ratio).
 import logging
 import math
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
 # --- 2. Bibliothèques tierces ---
 import optuna
@@ -18,13 +18,18 @@ import yaml
 
 # --- 3. Imports locaux du projet ---
 from backtesting.engine import BacktestEngine
+from backtesting.portfolio import (
+    aggregate_weighted_returns,
+    compute_portfolio_metrics,
+    normalize_weights,
+)
 from risk_management.position_sizing import (
     FixedFractionalSizer,
     FixedSizer,
     VolatilityBasedSizer,
 )
 from strategies.base_strategy import BaseStrategy
-from utils.config_loader import get_log_level
+from utils.config_loader import get_log_level, get_settings
 from utils.data_manager import DataManager
 from utils.logger import setup_logger
 
@@ -63,6 +68,7 @@ class OptunaOptimizer:
         position_sizing_config: Optional[Dict[str, Any]] = None,
         objective_config: Optional[Dict[str, Any]] = None,
         study_config: Optional[Dict[str, Any]] = None,
+        portfolio_config: Optional[Dict[str, Any]] = None,
         output_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialise l'optimiseur Optuna.
@@ -77,6 +83,7 @@ class OptunaOptimizer:
             position_sizing_config: Configuration du position sizing.
             objective_config: Configuration de la fonction objectif.
             study_config: Paramètres de l'étude Optuna (sampler, pruner...).
+            portfolio_config: Paramètres portfolio (alignment, etc.).
             output_config: Paramètres de sauvegarde (logs, fichiers résultats).
         """
 
@@ -89,6 +96,7 @@ class OptunaOptimizer:
         self.position_sizing_config = position_sizing_config or {}
         self.objective_config = objective_config or {}
         self.study_config = study_config or {}
+        self.portfolio_config = portfolio_config or {}
         self.output_config = output_config or {}
 
         if not self.param_space:
@@ -98,14 +106,18 @@ class OptunaOptimizer:
             "log_file", "logs/optimization/optuna_optimizer.log"
         )
         log_level = get_log_level("optimization")
-        self.logger = setup_logger(__name__, log_file=log_file, level="ERROR")
+        self.logger = setup_logger(__name__, log_file=log_file, level=log_level)
 
         self.logger.info(
             "Initialisation de l'OptunaOptimizer pour %s", self.strategy_name
         )
 
         self.data_manager = DataManager()
-        self.data_frame = self._load_data()
+        self.data_frames = self._load_data_frames()
+        if not self.data_frames:
+            raise ValueError("Aucun DataFrame de données n'a été chargé.")
+        self.tickers: Sequence[str] = list(self.data_frames.keys())
+        self.data_frame = self.data_frames[self.tickers[0]]  # compatibilité
 
         self.metric_name = self.objective_config.get("metric", "sharpe").lower()
         if self.metric_name not in {"sharpe"}:
@@ -120,19 +132,49 @@ class OptunaOptimizer:
         )
 
         self.study: Optional[optuna.Study] = None
+        self.analytics_settings = self._load_analytics_settings()
 
     # ------------------------------------------------------------------
     # Chargement des données et configuration Backtrader
     # ------------------------------------------------------------------
-    def _load_data(self) -> pd.DataFrame:
-        """Charge les données via le DataManager."""
+    def _load_data_frames(self) -> Dict[str, pd.DataFrame]:
+        """Charge les données pour un ou plusieurs tickers."""
 
-        ticker = self.data_config.get("ticker")
-        if not ticker:
+        tickers_cfg = self.data_config.get("tickers")
+        if tickers_cfg:
+            if isinstance(tickers_cfg, str):
+                candidates = [tickers_cfg]
+            else:
+                candidates = list(tickers_cfg)
+        else:
+            ticker = self.data_config.get("ticker")
+            if not ticker:
+                raise ValueError(
+                    "'ticker' ou 'tickers' doit être défini dans la configuration des données"
+                )
+            candidates = [ticker]
+
+        tickers: List[str] = [
+            str(t).strip() for t in candidates if isinstance(t, str) and str(t).strip()
+        ]
+        if not tickers:
             raise ValueError(
-                "'ticker' doit être défini dans la configuration des données"
+                "Aucun ticker valide fourni pour le chargement des données."
             )
 
+        if len(tickers) > 1 and not (
+            self.data_config.get("start_date") and self.data_config.get("end_date")
+        ):
+            raise ValueError(
+                "Le mode multi-ticker requiert 'start_date' et 'end_date' dans data."
+            )
+
+        frames: Dict[str, pd.DataFrame] = {}
+        for ticker in tickers:
+            frames[ticker] = self._load_single_data_frame(ticker)
+        return frames
+
+    def _load_single_data_frame(self, ticker: str) -> pd.DataFrame:
         start_date = self.data_config.get("start_date")
         end_date = self.data_config.get("end_date")
         interval = self.data_config.get("interval")
@@ -157,7 +199,9 @@ class OptunaOptimizer:
 
         return df
 
-    def _create_engine(self) -> BacktestEngine:
+    def _create_engine(
+        self, data_frame: Optional[pd.DataFrame] = None
+    ) -> BacktestEngine:
         """Crée et configure un BacktestEngine prêt pour l'exécution."""
 
         engine = BacktestEngine()
@@ -179,7 +223,10 @@ class OptunaOptimizer:
             if slippage > 0:
                 engine.cerebro.broker.set_slippage_perc(perc=slippage)
 
-        engine.add_data(self.data_frame.copy(), name="data0")
+        engine.add_data(
+            (data_frame if data_frame is not None else self.data_frame).copy(),
+            name="data0",
+        )
         self._configure_position_sizing(engine)
 
         return engine
@@ -225,6 +272,16 @@ class OptunaOptimizer:
             self.logger.error(
                 "Erreur lors de la configuration du position sizing (%s)", exc
             )
+
+    def _load_analytics_settings(self) -> Dict[str, Any]:
+        """Charge les paramètres analytics globaux."""
+
+        try:
+            settings = get_settings()
+            return settings.get("analytics", {})
+        except Exception:
+            self.logger.warning("Impossible de charger settings.yaml pour analytics.")
+            return {}
 
     # ------------------------------------------------------------------
     # Suggestion de paramètres et validation
@@ -357,6 +414,10 @@ class OptunaOptimizer:
             trial.set_user_attr("constraint_violation", True)
             return self.penalty_value
 
+        if len(self.tickers) > 1:
+            return self._objective_multi_ticker(trial, params)
+
+        ticker = self.tickers[0]
         engine = self._create_engine()
         engine.add_strategy(self.strategy_class, **params)
 
@@ -400,6 +461,99 @@ class OptunaOptimizer:
             raise optuna.TrialPruned()
 
         return float(objective_value)
+
+    def _objective_multi_ticker(
+        self, trial: optuna.Trial, params: Dict[str, Any]
+    ) -> float:
+        """Évalue la stratégie sur plusieurs tickers et agrège les rendements."""
+
+        runs: List[Tuple[str, Dict[str, Any], pd.Series]] = []
+        per_ticker_metrics: Dict[str, Dict[str, Any]] = {}
+
+        for ticker in self.tickers:
+            df = self.data_frames[ticker]
+            engine = self._create_engine(df)
+            engine.add_strategy(self.strategy_class, **params)
+
+            try:
+                results = engine.run()
+            except Exception as exc:
+                self.logger.exception(
+                    "Erreur backtest multi-ticker (%s, trial %s)", ticker, trial.number
+                )
+                trial.set_user_attr("error", f"{ticker}:{exc}")
+                return self.penalty_value
+
+            if not results:
+                trial.set_user_attr("error", f"{ticker}:no_results")
+                return self.penalty_value
+
+            strat = results[0]
+            metrics = self._gather_metrics(strat)
+            returns = self._extract_time_returns(strat)
+            per_ticker_metrics[ticker] = metrics
+            runs.append((ticker, metrics, returns))
+
+        total_trades = sum(
+            metrics.get("total_trades", 0) for metrics in per_ticker_metrics.values()
+        )
+        if total_trades < self.min_trades:
+            trial.set_user_attr("low_trade_count", total_trades)
+            return self.penalty_value
+
+        try:
+            weights = normalize_weights(self.tickers, self.data_config.get("weights"))
+        except ValueError as exc:
+            self.logger.error("Configuration de poids invalide: %s", exc)
+            trial.set_user_attr("error", str(exc))
+            return self.penalty_value
+
+        returns_map = {ticker: returns for ticker, _, returns in runs}
+        alignment = str(self.portfolio_config.get("alignment", "intersection")).lower()
+        portfolio_returns = aggregate_weighted_returns(returns_map, weights, alignment)
+
+        if portfolio_returns.empty:
+            trial.set_user_attr("error", "empty_portfolio_returns")
+            return self.penalty_value
+
+        initial_capital = float(self.broker_config.get("initial_capital", 10000.0))
+        portfolio_metrics, _, _, _ = compute_portfolio_metrics(
+            portfolio_returns,
+            initial_capital,
+            self.analytics_settings,
+        )
+
+        sharpe = portfolio_metrics.get("sharpe_ratio")
+        if sharpe is None or not math.isfinite(sharpe):
+            return self.penalty_value
+
+        trial.set_user_attr("portfolio_metrics", portfolio_metrics)
+        trial.set_user_attr("portfolio_weights", weights.to_dict())
+        trial.set_user_attr("per_ticker_metrics", per_ticker_metrics)
+        trial.set_user_attr("total_trades", total_trades)
+
+        trial.report(sharpe, step=0)
+        if trial.should_prune():
+            self.logger.info(
+                "Trial %s interrompu par pruner (multi-ticker)", trial.number
+            )
+            raise optuna.TrialPruned()
+
+        return float(sharpe)
+
+    def _extract_time_returns(self, strat: BaseStrategy) -> pd.Series:
+        """Récupère la série de rendements TimeReturn depuis Backtrader."""
+
+        try:
+            returns_dict = strat.analyzers.timereturns.get_analysis()
+            if isinstance(returns_dict, dict):
+                series = pd.Series(returns_dict)
+                series.index = pd.to_datetime(series.index)
+                return series.sort_index()
+        except Exception:
+            pass
+
+        return pd.Series(dtype=float)
 
     def _gather_metrics(self, strat: BaseStrategy) -> Dict[str, Any]:
         """Extrait les métriques utiles depuis la stratégie Backtrader."""

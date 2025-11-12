@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Walk-Forward Analysis</title>
+    <style>
+      body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+      h1 { margin-bottom: 12px; }
+      .table-summary { margin-bottom: 24px; border-collapse: collapse; width: 100%; }
+      .table-details { border-collapse: collapse; width: 100%; }
+      table, th, td { border: 1px solid #ccc; padding: 6px 8px; }
+      th { background-color: #f4f5f7; text-align: left; }
+    </style>
+  </head>
+  <body>
+    <h1>Walk-Forward Analysis</h1>
+    <section>
+      <h2>Résumé</h2>
+      <table border="1" class="dataframe table table-summary">
+  <thead>
+    <tr style="text-align: right;">
+      <th>train_sharpe_mean</th>
+      <th>train_sharpe_std</th>
+      <th>test_sharpe_mean</th>
+      <th>test_sharpe_std</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>-8.844981</td>
+      <td>0.859852</td>
+      <td>-11.404028</td>
+      <td>24.882281</td>
+    </tr>
+  </tbody>
+</table>
+    </section>
+    <section>
+      <h2>Détails</h2>
+      <table border="1" class="dataframe table table-details">
+  <thead>
+    <tr style="text-align: right;">
+      <th>fold</th>
+      <th>train_start</th>
+      <th>train_end</th>
+      <th>test_start</th>
+      <th>test_end</th>
+      <th>train_sharpe</th>
+      <th>test_sharpe</th>
+      <th>train_total_trades</th>
+      <th>test_total_trades</th>
+      <th>train_max_dd</th>
+      <th>test_max_dd</th>
+      <th>best_params</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>fold_01</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2021-12-31 06:00:00+01:00</td>
+      <td>2022-01-03 06:00:00+01:00</td>
+      <td>2022-07-01 06:00:00+02:00</td>
+      <td>-10.708854</td>
+      <td>NaN</td>
+      <td>9</td>
+      <td>2</td>
+      <td>0.082256</td>
+      <td>0.160343</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_02</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2022-07-01 06:00:00+02:00</td>
+      <td>2022-07-05 06:00:00+02:00</td>
+      <td>2022-12-30 06:00:00+01:00</td>
+      <td>-8.612592</td>
+      <td>NaN</td>
+      <td>12</td>
+      <td>2</td>
+      <td>0.202778</td>
+      <td>0.132564</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_03</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2022-12-30 06:00:00+01:00</td>
+      <td>2023-01-03 06:00:00+01:00</td>
+      <td>2023-06-30 06:00:00+02:00</td>
+      <td>-7.832381</td>
+      <td>NaN</td>
+      <td>15</td>
+      <td>0</td>
+      <td>0.253781</td>
+      <td>0.000000</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_04</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2023-06-30 06:00:00+02:00</td>
+      <td>2023-07-03 06:00:00+02:00</td>
+      <td>2024-01-02 06:00:00+01:00</td>
+      <td>-8.388884</td>
+      <td>-70.239788</td>
+      <td>16</td>
+      <td>2</td>
+      <td>0.253781</td>
+      <td>0.060704</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_05</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2023-12-29 06:00:00+01:00</td>
+      <td>2024-01-02 06:00:00+01:00</td>
+      <td>2024-07-02 06:00:00+02:00</td>
+      <td>-8.764579</td>
+      <td>NaN</td>
+      <td>19</td>
+      <td>1</td>
+      <td>0.363291</td>
+      <td>0.012624</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_06</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2024-07-01 06:00:00+02:00</td>
+      <td>2024-07-02 06:00:00+02:00</td>
+      <td>2025-01-02 06:00:00+01:00</td>
+      <td>-9.319354</td>
+      <td>-20.992434</td>
+      <td>21</td>
+      <td>2</td>
+      <td>0.363291</td>
+      <td>0.112516</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_07</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2024-12-31 06:00:00+01:00</td>
+      <td>2025-01-02 06:00:00+01:00</td>
+      <td>2025-07-02 06:00:00+02:00</td>
+      <td>-8.683896</td>
+      <td>NaN</td>
+      <td>24</td>
+      <td>2</td>
+      <td>0.363291</td>
+      <td>0.112240</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+    <tr>
+      <td>fold_08</td>
+      <td>2019-01-02 06:00:00+01:00</td>
+      <td>2025-07-01 06:00:00+02:00</td>
+      <td>2025-07-02 06:00:00+02:00</td>
+      <td>2025-10-31 05:00:00+01:00</td>
+      <td>-8.449304</td>
+      <td>NaN</td>
+      <td>27</td>
+      <td>0</td>
+      <td>0.363291</td>
+      <td>0.000000</td>
+      <td>{"fast_period": 6, "slow_period": 45, "stop_loss_pct": 0.01, "take_profit_atr_mult": 5.0}</td>
+    </tr>
+  </tbody>
+</table>
+    </section>
+  </body>
+</html>
