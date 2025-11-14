@@ -316,7 +316,7 @@ Phase 12 : Architecture de Trading Live (Paper & Live)
         - [ ] Migrer de la boucle `next()` de Backtrader à une boucle d'événements (Event Loop : `MarketEvent`, `SignalEvent`, `OrderEvent`, `FillEvent`).
         - [ ] *Objectif :* Utiliser la *même* logique de stratégie pour le backtest et le live.
     - [ ] 12.3 Service de Monitoring & Alertes
-        - [ ] Logger les exécutions d'ordres vers un canal dédié (ex: Telegram, Slack).
+        - [ ] Logger les exécutions d'ordres vers un canal dédié (Telegram).
         - [ ] Mettre en place un "Heartbeat" (service qui vérifie que le trader tourne toujours).
 
 🎯 Phase 13 : Scanner & Gestion de Portefeuille
@@ -337,6 +337,7 @@ Phase 14 : Pipeline de Données de Production
         - [ ] Créer un "ETL" qui peuple cette base de données (en dehors du script de trading).
     - [ ] 14.3 Mise à jour du DataManager
         - [ ] `utils/data_manager.py` doit être modifié pour lire depuis cette nouvelle base de données (en live) au lieu des fichiers CSV (en backtest).
+
 📈 Métriques de Succès du Projet
 Court terme (1 mois)
 
