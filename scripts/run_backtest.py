@@ -91,6 +91,67 @@ def discover_strategies() -> Dict[str, Type[BaseStrategy]]:
     return strategies
 
 
+def _extract_price_series(
+    df: pd.DataFrame,
+    price_candidates: Sequence[str],
+) -> Optional[pd.Series]:
+    """Retourne une série de prix alignée sur un index date si possible."""
+    price_col = next((col for col in price_candidates if col in df.columns), None)
+    if price_col is None:
+        return None
+
+    series = pd.to_numeric(df[price_col], errors="coerce")
+    if isinstance(df.index, pd.DatetimeIndex):
+        index = df.index
+    else:
+        date_col = next(
+            (
+                col
+                for col in ("date", "Date", "datetime", "Datetime")
+                if col in df.columns
+            ),
+            None,
+        )
+        if date_col is not None:
+            index = pd.to_datetime(df[date_col], errors="coerce")
+        else:
+            index = pd.RangeIndex(len(series))
+
+    index = pd.to_datetime(index, errors="coerce")
+    if isinstance(index, pd.DatetimeIndex) and index.tz is not None:
+        index = index.tz_convert("UTC").tz_localize(None)
+    if isinstance(index, pd.DatetimeIndex):
+        index = index.normalize()
+
+    price_series = pd.Series(series.values, index=index)
+    price_series = price_series.dropna()
+    return price_series if not price_series.empty else None
+
+
+def _align_prices_to_equity(
+    prices: pd.Series,
+    equity_index: Optional[pd.Index],
+) -> pd.Series:
+    prices = prices.sort_index()
+    prices.index = pd.to_datetime(prices.index, errors="coerce")
+    if isinstance(prices.index, pd.DatetimeIndex) and prices.index.tz is not None:
+        prices.index = prices.index.tz_convert("UTC").tz_localize(None)
+    if isinstance(prices.index, pd.DatetimeIndex):
+        prices.index = prices.index.normalize()
+
+    target_index = None
+    if equity_index is not None and len(equity_index) > 0:
+        target_index = pd.to_datetime(equity_index, errors="coerce")
+        if isinstance(target_index, pd.DatetimeIndex) and target_index.tz is not None:
+            target_index = target_index.tz_convert("UTC").tz_localize(None)
+        if isinstance(target_index, pd.DatetimeIndex):
+            target_index = target_index.normalize()
+
+    if target_index is not None and len(target_index) > 0:
+        prices = prices.reindex(target_index).ffill().bfill()
+    return prices.dropna()
+
+
 def load_config(config_path: str) -> Dict[str, Any]:
     """
     Charge la configuration depuis un fichier YAML.
@@ -221,7 +282,9 @@ def print_results(results: list, initial_capital: float, data_df: pd.DataFrame) 
         years = days / 365.25 if days > 0 else 0.0
     except Exception:
         years = 0.0
-    cagr = ((final_value / initial_capital) ** (1.0 / years) - 1.0) if years > 0 else 0.0
+    cagr = (
+        ((final_value / initial_capital) ** (1.0 / years) - 1.0) if years > 0 else 0.0
+    )
 
     # --- Affichage ---
     print("\n" + "=" * 70)
@@ -557,9 +620,7 @@ def _print_portfolio_summary(
     )
     print(f"   Sharpe Ratio:    {metrics.get('sharpe_ratio', float('nan')):>15.2f}")
     # metrics['max_drawdown'] est une proportion (0.0-1.0). Afficher en %.
-    print(
-        f"   Max Drawdown:    {metrics.get('max_drawdown', 0) * 100:>15.2f}%"
-    )
+    print(f"   Max Drawdown:    {metrics.get('max_drawdown', 0) * 100:>15.2f}%")
 
     print("TRADES AGREGERES")
     print(f"   Nombre Total:    {trade_stats.get('total', 0):>15}")
@@ -697,6 +758,53 @@ def _generate_strategy_report(
     )
     perf_metrics.setdefault("expectancy", perf_metrics.get("expectancy", 0.0))
 
+    benchmark_payload: Optional[Dict[str, Any]] = None
+    price_columns = ["adj_close", "Adj Close", "AdjClose", "close", "Close"]
+    price_series = _extract_price_series(data_df, price_columns)
+    if price_series is not None:
+        equity_index = equity.index if equity is not None else price_series.index
+        aligned_prices = _align_prices_to_equity(price_series, equity_index)
+        if not aligned_prices.empty and float(aligned_prices.iloc[0]) != 0.0:
+            shares = initial_capital / float(aligned_prices.iloc[0])
+            bh_equity = aligned_prices * shares
+            bh_returns = bh_equity.pct_change().fillna(0.0)
+            bh_log_returns = np.log1p(bh_returns)
+            bh_dd_metrics, _ = dd_an.analyze(bh_equity)
+            bh_perf = perf.compute(
+                equity=bh_equity,
+                returns=bh_log_returns,
+                trades=None,
+                periods_per_year=periods_per_year,
+                risk_free_rate_annual=risk_free,
+                mar_annual=mar,
+            )
+            bh_max_dd = bh_dd_metrics.get("max_drawdown", 0.0)
+            bh_cagr = bh_perf.get("cagr", 0.0)
+            try:
+                bh_calmar = perf.compute_calmar(bh_cagr, bh_max_dd)
+            except Exception:
+                bh_calmar = 0.0
+
+            bh_final_value = float(bh_equity.iloc[-1])
+            bh_pnl = bh_final_value - initial_capital
+            bh_perf.update(
+                {
+                    "calmar_ratio": bh_calmar,
+                    "max_drawdown": bh_max_dd,
+                    "ulcer_index": bh_dd_metrics.get("ulcer_index", 0.0),
+                    "final_value": bh_final_value,
+                    "pnl": bh_pnl,
+                    "pnl_pct": (
+                        (bh_pnl / initial_capital) * 100 if initial_capital else 0.0
+                    ),
+                }
+            )
+            benchmark_payload = {
+                "name": "Buy & Hold",
+                "metrics": bh_perf,
+                "equity": bh_equity,
+            }
+
     out_dir = report_cfg.get("out_dir", "reports/generated")
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     out_file = (
@@ -704,6 +812,7 @@ def _generate_strategy_report(
     )
     out_path = str(Path(out_dir) / out_file)
     template = report_cfg.get("template", "default.html")
+    logger.info("Benchmark payload for %s: %s", ticker, bool(benchmark_payload))
 
     generate_report(
         meta={
@@ -725,6 +834,7 @@ def _generate_strategy_report(
             "risk_free_rate": risk_free,
             "rolling_window": analytics_settings.get("rolling_window", 63),
         },
+        benchmark=benchmark_payload,
     )
 
 
@@ -739,6 +849,9 @@ def _generate_portfolio_report(
     working_returns: pd.Series,
     report_cfg: Dict[str, Any],
     analytics_settings: Dict[str, Any],
+    *,
+    data_frames: Optional[Dict[str, pd.DataFrame]] = None,
+    initial_capital: float = 0.0,
 ) -> None:
     try:
         from reports.report_generator import generate_report
@@ -770,6 +883,98 @@ def _generate_portfolio_report(
         ),
     }
 
+    benchmark_payload: Optional[Dict[str, Any]] = None
+    if data_frames:
+        try:
+            from backtesting.analyzers import drawdown as dd_an
+            from backtesting.analyzers import performance as perf
+        except Exception as exc:
+            logger.error("Imports analyzers indisponibles pour benchmark: %s", exc)
+        else:
+            price_columns = ["adj_close", "Adj Close", "AdjClose", "close", "Close"]
+            price_series: Dict[str, pd.Series] = {}
+            for ticker in tickers:
+                df = data_frames.get(ticker)
+                if df is None or df.empty:
+                    continue
+                series = _extract_price_series(df, price_columns)
+                if series is None:
+                    continue
+                price_series[ticker] = series
+
+            if price_series and initial_capital > 0:
+                try:
+                    price_df = pd.concat(
+                        price_series, axis=1, join="outer"
+                    ).sort_index()
+                except Exception:
+                    price_df = pd.DataFrame(price_series).sort_index()
+                price_df = price_df.ffill().dropna(how="all")
+                if not price_df.empty:
+                    aligned_weights = weights.reindex(price_df.columns).fillna(0.0)
+                    total_weight = aligned_weights.sum()
+                    if total_weight > 0:
+                        aligned_weights = aligned_weights / total_weight
+                        start_prices = price_df.iloc[0].replace(0, np.nan)
+                        shares = (
+                            (initial_capital * aligned_weights)
+                            .divide(start_prices)
+                            .replace([np.inf, -np.inf], np.nan)
+                            .fillna(0.0)
+                        )
+                        bh_equity = (price_df * shares).sum(axis=1)
+                        if equity is not None and not equity.empty:
+                            bh_equity = _align_prices_to_equity(bh_equity, equity.index)
+                        else:
+                            bh_equity = bh_equity.dropna()
+
+                        if not bh_equity.empty:
+                            bh_returns = bh_equity.pct_change().fillna(0.0)
+                            bh_log_returns = np.log1p(bh_returns)
+                            bh_dd_metrics, _ = dd_an.analyze(bh_equity)
+                            bh_perf = perf.compute(
+                                equity=bh_equity,
+                                returns=bh_log_returns,
+                                trades=None,
+                                periods_per_year=analytics_settings.get(
+                                    "periods_per_year", 252
+                                ),
+                                risk_free_rate_annual=analytics_settings.get(
+                                    "risk_free_rate", 0.0
+                                ),
+                                mar_annual=analytics_settings.get("mar", 0.0),
+                            )
+                            bh_max_dd = bh_dd_metrics.get("max_drawdown", 0.0)
+                            bh_cagr = bh_perf.get("cagr", 0.0)
+                            try:
+                                bh_calmar = perf.compute_calmar(bh_cagr, bh_max_dd)
+                            except Exception:
+                                bh_calmar = 0.0
+
+                            bh_final_value = float(bh_equity.iloc[-1])
+                            bh_pnl = bh_final_value - initial_capital
+                            bh_perf.update(
+                                {
+                                    "calmar_ratio": bh_calmar,
+                                    "max_drawdown": bh_max_dd,
+                                    "ulcer_index": bh_dd_metrics.get(
+                                        "ulcer_index", 0.0
+                                    ),
+                                    "final_value": bh_final_value,
+                                    "pnl": bh_pnl,
+                                    "pnl_pct": (
+                                        (bh_pnl / initial_capital) * 100
+                                        if initial_capital
+                                        else 0.0
+                                    ),
+                                }
+                            )
+                            benchmark_payload = {
+                                "name": "Buy & Hold",
+                                "metrics": bh_perf,
+                                "equity": bh_equity,
+                            }
+
     generate_report(
         meta=meta,
         metrics=metrics,
@@ -785,6 +990,7 @@ def _generate_portfolio_report(
             "risk_free_rate": analytics_settings.get("risk_free_rate", 0.0),
             "rolling_window": analytics_settings.get("rolling_window", 63),
         },
+        benchmark=benchmark_payload,
     )
 
 
@@ -980,6 +1186,8 @@ def _run_multi_ticker_backtest(
             working_returns,
             report_cfg,
             analytics_settings,
+            data_frames=data_frames,
+            initial_capital=initial_capital,
         )
 
     if output_config.get("plot", False):

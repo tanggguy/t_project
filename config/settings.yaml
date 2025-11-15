@@ -12,7 +12,7 @@ project:
 
 
 logging:
-  log_level: ERROR  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: WARNING  # DEBUG, INFO, WARNING, ERROR, CRITICAL
   file: logs/trading_project.log
   max_bytes: 5242880  # 5 MB
   backup_count: 5

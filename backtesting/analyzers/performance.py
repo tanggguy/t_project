@@ -93,9 +93,25 @@ def compute_trade_stats(trades: Optional[pd.DataFrame]) -> Dict[str, Any]:
             "worst_trade": 0.0,
             "payoff_ratio": 0.0,
             "expectancy": 0.0,
+            "max_consecutive_losses": 0,
+            "avg_trade_size": 0.0,
+            "avg_trade_duration_days": 0.0,
         }
 
     df = trades.copy()
+    # Essayer de trier chronologiquement pour les statistiques de séries
+    if "entry_dt" in df.columns:
+        try:
+            df["entry_dt"] = pd.to_datetime(df["entry_dt"], errors="coerce")
+            df = df.sort_values("entry_dt")
+        except Exception:
+            df = df.copy()
+    elif "exit_dt" in df.columns:
+        try:
+            df["exit_dt"] = pd.to_datetime(df["exit_dt"], errors="coerce")
+            df = df.sort_values("exit_dt")
+        except Exception:
+            df = df.copy()
     # Supposer colonne 'net_pnl' (fallback sur 'pnl')
     if "net_pnl" in df.columns:
         pnl_col = "net_pnl"
@@ -114,6 +130,9 @@ def compute_trade_stats(trades: Optional[pd.DataFrame]) -> Dict[str, Any]:
             "worst_trade": 0.0,
             "payoff_ratio": 0.0,
             "expectancy": 0.0,
+            "max_consecutive_losses": 0,
+            "avg_trade_size": 0.0,
+            "avg_trade_duration_days": 0.0,
         }
 
     total = len(df)
@@ -132,6 +151,45 @@ def compute_trade_stats(trades: Optional[pd.DataFrame]) -> Dict[str, Any]:
     best_trade = float(df[pnl_col].max()) if total > 0 else 0.0
     worst_trade = float(df[pnl_col].min()) if total > 0 else 0.0
 
+    # Taille moyenne de trade (absolue si disponible)
+    if "size" in df.columns:
+        try:
+            avg_trade_size = float(
+                pd.to_numeric(df["size"], errors="coerce").abs().mean()
+            )
+        except Exception:
+            avg_trade_size = 0.0
+    else:
+        avg_trade_size = 0.0
+
+    # Durée moyenne des trades en jours (si disponible)
+    if "duration_days" in df.columns:
+        try:
+            avg_trade_duration_days = float(
+                pd.to_numeric(df["duration_days"], errors="coerce")
+                .dropna()
+                .mean()
+            )
+        except Exception:
+            avg_trade_duration_days = 0.0
+    else:
+        avg_trade_duration_days = 0.0
+
+    # Plus grande série de pertes consécutives
+    max_consecutive_losses = 0
+    current_streak = 0
+    try:
+        loss_flags = df[pnl_col] < 0
+        for is_loss in loss_flags:
+            if bool(is_loss):
+                current_streak += 1
+                if current_streak > max_consecutive_losses:
+                    max_consecutive_losses = current_streak
+            else:
+                current_streak = 0
+    except Exception:
+        max_consecutive_losses = 0
+
     payoff_ratio = (avg_win / abs(avg_loss)) if avg_loss < 0 else (avg_win / 1.0 if avg_loss == 0 else 0.0)
 
     expectancy = ((won / total) * avg_win + (lost / total) * avg_loss) if total > 0 else 0.0
@@ -148,6 +206,9 @@ def compute_trade_stats(trades: Optional[pd.DataFrame]) -> Dict[str, Any]:
         "worst_trade": worst_trade,
         "payoff_ratio": payoff_ratio,
         "expectancy": expectancy,
+        "max_consecutive_losses": int(max_consecutive_losses),
+        "avg_trade_size": avg_trade_size,
+        "avg_trade_duration_days": avg_trade_duration_days,
     }
 
 
@@ -177,6 +238,12 @@ def compute(
     sharpe = compute_sharpe(r, periods_per_year, risk_free_rate_annual)
     sortino = compute_sortino(r, periods_per_year, mar_annual)
 
+    # VolatilitÃ© annuelle simple (log-returns)
+    if not r.empty:
+        ann_vol = float(r.std(ddof=0) * np.sqrt(periods_per_year))
+    else:
+        ann_vol = 0.0
+
     # Equity / CAGR
     cagr = compute_cagr(equity, periods_per_year) if equity is not None else 0.0
 
@@ -187,6 +254,7 @@ def compute(
         "sharpe_ratio": sharpe,
         "sortino_ratio": sortino,
         "cagr": cagr,
+        "ann_vol": ann_vol,
         **tstats,
     }
     return metrics

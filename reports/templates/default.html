@@ -1,23 +1,37 @@
-
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rapport Backtest - {{ meta.strategy_name }}</title>
     <style>
       :root {
+        --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        --font-heading: 'Montserrat', 'Inter', 'Segoe UI', system-ui, sans-serif;
+      }
+
+      :root[data-theme='dark'] {
         color-scheme: dark;
         --bg: #0f172a;
-        --bg-card: rgba(15, 23, 42, 0.6);
-        --border: rgba(148, 163, 184, 0.15);
+        --bg-card: rgba(15, 23, 42, 0.9);
+        --border: rgba(148, 163, 184, 0.25);
         --text: #e2e8f0;
         --text-muted: #94a3b8;
         --accent: #38bdf8;
         --success: #2ec4b6;
         --danger: #f87171;
-        --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
-        --font-heading: 'Montserrat', 'Inter', 'Segoe UI', system-ui, sans-serif;
+      }
+
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --bg: #f9fafb;
+        --bg-card: #ffffff;
+        --border: rgba(148, 163, 184, 0.35);
+        --text: #0f172a;
+        --text-muted: #6b7280;
+        --accent: #0ea5e9;
+        --success: #16a34a;
+        --danger: #dc2626;
       }
 
       * {
@@ -27,13 +41,18 @@
       body {
         margin: 0;
         padding: 32px;
-        background: radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%), radial-gradient(circle at bottom right, rgba(94, 234, 212, 0.08), transparent 45%), var(--bg);
+        background:
+          radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%),
+          radial-gradient(circle at bottom right, rgba(94, 234, 212, 0.08), transparent 45%),
+          var(--bg);
         color: var(--text);
         font-family: var(--font-body);
         line-height: 1.6;
       }
 
-      h1, h2, h3 {
+      h1,
+      h2,
+      h3 {
         font-family: var(--font-heading);
         margin: 0;
         letter-spacing: 0.4px;
@@ -58,6 +77,30 @@
         margin-bottom: 24px;
       }
 
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .theme-toggle-btn {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.18);
+        color: var(--text-muted);
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .theme-toggle-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
       .meta {
         color: var(--text-muted);
         font-size: 0.95rem;
@@ -70,7 +113,11 @@
       }
 
       .summary-card {
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(14, 165, 233, 0.04));
+        background: linear-gradient(
+          135deg,
+          rgba(56, 189, 248, 0.16),
+          rgba(14, 165, 233, 0.04)
+        );
         border: 1px solid rgba(56, 189, 248, 0.25);
         border-radius: 18px;
         padding: 20px;
@@ -125,7 +172,8 @@
         font-size: 0.95rem;
       }
 
-      th, td {
+      th,
+      td {
         border-bottom: 1px solid rgba(148, 163, 184, 0.15);
         padding: 10px 0;
         text-align: right;
@@ -171,13 +219,152 @@
         color: var(--text-muted);
       }
 
+      .tag {
+        border-radius: 999px;
+        padding: 4px 12px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        color: var(--accent);
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      .benchmark-card {
+        margin-bottom: 32px;
+      }
+
+      .benchmark-note {
+        margin: 4px 0 0;
+        font-size: 0.9rem;
+      }
+
+      .benchmark-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .benchmark-item {
+        border: 1px dashed var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        background: rgba(56, 189, 248, 0.04);
+      }
+
+      .benchmark-item .label {
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .value-primary {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+
+      .value-secondary {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+      }
+
+      .benchmark-delta {
+        margin-top: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .benchmark-delta.positive {
+        color: var(--success);
+      }
+
+      .benchmark-delta.negative {
+        color: var(--danger);
+      }
+
       .charts {
         display: grid;
         gap: 24px;
       }
 
+      .charts-full {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
       .trades-table {
         overflow: auto;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .toggle-btn {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-muted);
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .toggle-btn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .interpretation p {
+        margin: 4px 0;
+        font-size: 0.95rem;
+      }
+
+      .checklist-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .rule-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .rule {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+      }
+
+      .rule-indicator {
+        font-size: 1.1rem;
+      }
+
+      .rule-ok {
+        color: var(--success);
+      }
+
+      .rule-fail {
+        color: var(--text-muted);
+      }
+
+      .rule-value {
+        margin-left: auto;
+        font-size: 0.85rem;
+        color: var(--text-muted);
       }
 
       table tr:hover {
@@ -199,10 +386,15 @@
       <div>
         <h1>Rapport Backtest</h1>
         <div class="meta">
-          Stratégie · {{ meta.strategy_name }} &nbsp;&nbsp;|&nbsp;&nbsp;
-          Ticker · {{ meta.ticker }} &nbsp;&nbsp;|&nbsp;&nbsp;
-          {{ meta.start_date }} → {{ meta.end_date }}
+          Strat&eacute;gie &middot; {{ meta.strategy_name }} &nbsp;&nbsp;|&nbsp;&nbsp;
+          Ticker &middot; {{ meta.ticker }} &nbsp;&nbsp;|&nbsp;&nbsp;
+          {{ meta.start_date }} &rarr; {{ meta.end_date }}
         </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle-btn" type="button">
+          Mode clair
+        </button>
       </div>
     </div>
 
@@ -211,11 +403,16 @@
         <div class="summary-grid">
           <div class="summary-item">
             <span>Capital Final</span>
-            <span>{{ '{:,.2f}'.format(metrics.final_value) if metrics.final_value else '—' }} €</span>
+            <span>
+              {{ '{:,.2f}'.format(metrics.final_value) if metrics.final_value is not none else 'N/A' }} EUR
+            </span>
           </div>
           <div class="summary-item">
             <span>P&amp;L</span>
-            <span>{{ '{:+.2f}'.format(metrics.pnl or 0.0) }} € ({{ '{:+.2f}%'.format(metrics.pnl_pct or 0.0) }})</span>
+            <span>
+              {{ '{:+.2f}'.format(metrics.pnl or 0.0) }} EUR
+              ({{ '{:+.2f}%'.format(metrics.pnl_pct or 0.0) }})
+            </span>
           </div>
           <div class="summary-item">
             <span>Total Trades</span>
@@ -231,20 +428,126 @@
       <div class="kpi">
         <div class="card">
           <div class="label">Sharpe</div>
-          <div class="value">{{ '%.2f'|format(metrics.sharpe_ratio or 0.0) }}</div>
+          <div class="value">
+            {{ '%.2f'|format(metrics.sharpe_ratio or 0.0) }}
+          </div>
         </div>
         <div class="card">
           <div class="label">Sortino</div>
-          <div class="value">{{ '%.2f'|format(metrics.sortino_ratio or 0.0) }}</div>
+          <div class="value">
+            {{ '%.2f'|format(metrics.sortino_ratio or 0.0) }}
+          </div>
         </div>
         <div class="card">
           <div class="label">Calmar</div>
-          <div class="value">{{ '%.2f'|format(metrics.calmar_ratio or 0.0) }}</div>
+          <div class="value">
+            {{ '%.2f'|format(metrics.calmar_ratio or 0.0) }}
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="grid two">
+    {% if interpretation %}
+    <div class="card interpretation">
+      <h2>Interpr&eacute;tation automatique</h2>
+      <p>{{ interpretation.fr }}</p>
+    </div>
+    {% endif %}
+
+    {% if benchmark %}
+    {% set bench_metrics = benchmark.metrics or {} %}
+    {% set bench_name = benchmark.name or 'Benchmark' %}
+    <div class="card benchmark-card">
+      <div class="card-header">
+        <div>
+          <h2>Comparaison Buy &amp; Hold</h2>
+          <p class="muted benchmark-note">
+            R&eacute;f&eacute;rence&nbsp;:&nbsp;{{ bench_name }}
+          </p>
+        </div>
+        <span class="tag">Benchmark</span>
+      </div>
+      <div class="benchmark-grid">
+        <div class="benchmark-item">
+          <span class="label">Capital final</span>
+          {% set strat_final = metrics.final_value or 0.0 %}
+          {% set bench_final = bench_metrics.get('final_value', 0.0) or 0.0 %}
+          {% set final_delta = ((strat_final - bench_final) / bench_final * 100) if bench_final else 0.0 %}
+          <div class="value-primary">
+            {{ '{:,.2f}'.format(strat_final) }} &euro;
+          </div>
+          <div class="value-secondary">
+            B&amp;H&nbsp;: {{ '{:,.2f}'.format(bench_final) }} &euro;
+          </div>
+          <div class="benchmark-delta {{ 'positive' if final_delta >= 0 else 'negative' }}">
+            {{ '%+.2f%%'|format(final_delta) }} vs B&amp;H
+          </div>
+        </div>
+        <div class="benchmark-item">
+          <span class="label">PnL %</span>
+          {% set strat_pnl_pct = metrics.pnl_pct or 0.0 %}
+          {% set bench_pnl_pct = bench_metrics.get('pnl_pct', 0.0) or 0.0 %}
+          {% set pnl_delta = strat_pnl_pct - bench_pnl_pct %}
+          <div class="value-primary">
+            {{ '%+.2f%%'|format(strat_pnl_pct) }}
+          </div>
+          <div class="value-secondary">
+            B&amp;H&nbsp;: {{ '%+.2f%%'|format(bench_pnl_pct) }}
+          </div>
+          <div class="benchmark-delta {{ 'positive' if pnl_delta >= 0 else 'negative' }}">
+            {{ '%+.2f pts'|format(pnl_delta) }} vs B&amp;H
+          </div>
+        </div>
+        <div class="benchmark-item">
+          <span class="label">CAGR</span>
+          {% set strat_cagr = (metrics.cagr or 0.0) * 100 %}
+          {% set bench_cagr = (bench_metrics.get('cagr', 0.0) or 0.0) * 100 %}
+          {% set cagr_delta = strat_cagr - bench_cagr %}
+          <div class="value-primary">
+            {{ '%+.2f%%'|format(strat_cagr) }}
+          </div>
+          <div class="value-secondary">
+            B&amp;H&nbsp;: {{ '%+.2f%%'|format(bench_cagr) }}
+          </div>
+          <div class="benchmark-delta {{ 'positive' if cagr_delta >= 0 else 'negative' }}">
+            {{ '%+.2f pts'|format(cagr_delta) }} vs B&amp;H
+          </div>
+        </div>
+        <div class="benchmark-item">
+          <span class="label">Max Drawdown</span>
+          {% set strat_dd = (metrics.max_drawdown or 0.0) * 100 %}
+          {% set bench_dd = (bench_metrics.get('max_drawdown', 0.0) or 0.0) * 100 %}
+          {% set dd_delta = bench_dd - strat_dd %}
+          <div class="value-primary">
+            {{ '{:.2f}%'.format(strat_dd) }}
+          </div>
+          <div class="value-secondary">
+            B&amp;H&nbsp;: {{ '{:.2f}%'.format(bench_dd) }}
+          </div>
+          <div class="benchmark-delta {{ 'positive' if dd_delta >= 0 else 'negative' }}">
+            R&eacute;duction vs B&amp;H&nbsp;: {{ '%+.2f pts'|format(dd_delta) }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if checklist %}
+    <div class="card checklist-card">
+      <h2>Checklist</h2>
+      <ul class="rule-list">
+        {% for rule in checklist %}
+        <li class="rule {{ 'rule-ok' if rule.passed else 'rule-fail' }}">
+          <span class="rule-indicator">{{ '✔' if rule.passed else '•' }}</span>
+          <span class="rule-text">{{ rule.label }}</span>
+          <span class="rule-value">{{ rule.value }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="charts-full">
       <div class="card">
         <h2>Equity Curve</h2>
         {{ plots.equity | safe }}
@@ -259,29 +562,56 @@
       <div class="card">
         <h2>Performance</h2>
         <table>
-          <tr><th>CAGR</th><td>{{ '%.2f%%'|format((metrics.cagr or 0.0) * 100) }}</td></tr>
-          <tr><th>Ulcer Index</th><td>{{ '%.2f'|format(metrics.ulcer_index or 0.0) }}</td></tr>
-          <tr><th>Expectancy</th><td>{{ '%.2f'|format(metrics.expectancy or 0.0) }}</td></tr>
+          <tr>
+            <th>CAGR</th>
+            <td>{{ '{:.2f}%'.format((metrics.cagr or 0.0) * 100) }}</td>
+          </tr>
+          <tr>
+            <th>Volatilit&eacute; annuelle</th>
+            <td>{{ '{:.2f}%'.format((metrics.ann_vol or 0.0) * 100) }}</td>
+          </tr>
+          <tr>
+            <th>Ulcer Index</th>
+            <td>{{ '%.2f'|format(metrics.ulcer_index or 0.0) }}</td>
+          </tr>
+          <tr>
+            <th>Expectancy</th>
+            <td>{{ '%.2f'|format(metrics.expectancy or 0.0) }}</td>
+          </tr>
         </table>
       </div>
       <div class="card">
         <h2>Trades Overview</h2>
         <table>
           <tr>
-            <th>Total</th><td>{{ metrics.total_trades }}</td>
-            <th>Win Rate</th><td>{{ '%.2f%%'|format(metrics.win_rate or 0.0) }}</td>
+            <th>Total</th>
+            <td>{{ metrics.total_trades }}</td>
+            <th>Win Rate</th>
+            <td>{{ '%.2f%%'|format(metrics.win_rate or 0.0) }}</td>
           </tr>
           <tr>
-            <th>Profit Factor</th><td>{{ '%.2f'|format(metrics.profit_factor or 0.0) }}</td>
-            <th>Payoff Ratio</th><td>{{ '%.2f'|format(metrics.payoff_ratio or 0.0) }}</td>
+            <th>Profit Factor</th>
+            <td>{{ '%.2f'|format(metrics.profit_factor or 0.0) }}</td>
+            <th>Payoff Ratio</th>
+            <td>{{ '%.2f'|format(metrics.payoff_ratio or 0.0) }}</td>
+          </tr>
+          <tr>
+            <th>Avg Trade Size</th>
+            <td>{{ '%.2f'|format(metrics.avg_trade_size or 0.0) }}</td>
+            <th>Avg Duration (jours)</th>
+            <td>{{ '%.2f'|format(metrics.avg_trade_duration_days or 0.0) }}</td>
+          </tr>
+          <tr>
+            <th>Max Losing Streak</th>
+            <td colspan="3">{{ metrics.max_consecutive_losses }}</td>
           </tr>
         </table>
       </div>
     </div>
 
-    <div class="grid two">
+    <div class="charts-full">
       <div class="card">
-        <h2>Métriques Rolling</h2>
+        <h2>M&eacute;triques Rolling</h2>
         {{ plots.rolling_metrics | safe }}
       </div>
       <div class="card">
@@ -290,38 +620,112 @@
       </div>
     </div>
 
-    {% if trades is not none and trades|length > 0 %}
-    <div class="card" style="margin-top: 24px;">
-      <h2>Tableau des Trades</h2>
-      <table>
-        <tr>
-          <th>Open</th>
-          <th>Close</th>
-          <th>Side</th>
-          <th>Size</th>
-          <th>Entry</th>
-          <th>Exit</th>
-          <th>Net PnL</th>
-          <th>Ret %</th>
-          <th>Dur (j)</th>
-        </tr>
-        {% for _, row in trades.iterrows() %}
-        <tr>
-          <td>{{ row.entry_dt }}</td>
-          <td>{{ row.exit_dt }}</td>
-          <td>{{ 'Long' if row.is_long else 'Short' }}</td>
-          <td>{{ (row.size|abs) if row.size is not none else 0 }}</td>
-          <td>{{ '%.2f'|format(row.entry_price or 0.0) }}</td>
-          <td>{{ '%.2f'|format(row.exit_price or 0.0) }}</td>
-          <td>{{ '%.2f'|format(row.net_pnl or 0.0) }}</td>
-          <td>{{ '%.2f%%'|format(row.ret_pct or 0.0) }}</td>
-          <td>{{ row.duration_days|int if row.duration_days is not none else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </table>
+    {% if plots.returns_hist or plots.exposure %}
+    <div class="charts-full">
+      {% if plots.returns_hist %}
+      <div class="card">
+        <h2>Distribution des rendements</h2>
+        {{ plots.returns_hist | safe }}
+      </div>
+      {% endif %}
+      {% if plots.exposure %}
+      <div class="card">
+        <h2>Exposition / Taille de position</h2>
+        {{ plots.exposure | safe }}
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 
+    {% if trades is not none and trades|length > 0 %}
+    <div class="card trades-card" style="margin-top: 24px;">
+      <div class="card-header">
+        <h2>Tableau des Trades</h2>
+        <button id="toggle-trades" class="toggle-btn" type="button">
+          Masquer les trades
+        </button>
+      </div>
+      <div id="trades-container" class="trades-table">
+        <table>
+          <tr>
+            <th>Open</th>
+            <th>Close</th>
+            <th>Side</th>
+            <th>Size</th>
+            <th>Entry</th>
+            <th>Exit</th>
+            <th>Net PnL</th>
+            <th>Ret %</th>
+            <th>Dur (j)</th>
+          </tr>
+          {% for _, row in trades.iterrows() %}
+          <tr>
+            <td>{{ row.entry_dt }}</td>
+            <td>{{ row.exit_dt }}</td>
+            <td>{{ 'Long' if row.is_long else 'Short' }}</td>
+            <td>{{ (row.size|abs) if row.size is not none else 0 }}</td>
+            <td>{{ '%.2f'|format(row.entry_price or 0.0) }}</td>
+            <td>{{ '%.2f'|format(row.exit_price or 0.0) }}</td>
+            <td>{{ '%.2f'|format(row.net_pnl or 0.0) }}</td>
+            <td>{{ '%.2f%%'|format(row.ret_pct or 0.0) }}</td>
+            <td>{{ row.duration_days|int if row.duration_days is not none else 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <script>
+      (function () {
+        var STORAGE_KEY = "backtest-report-theme";
+        var root = document.documentElement;
+
+        function applyTheme(theme) {
+          if (!theme) {
+            theme = "dark";
+          }
+          root.setAttribute("data-theme", theme);
+          var btn = document.getElementById("theme-toggle");
+          if (btn) {
+            btn.textContent = theme === "dark" ? "Mode clair" : "Mode sombre";
+          }
+        }
+
+        var saved = null;
+        try {
+          saved = window.localStorage.getItem(STORAGE_KEY);
+        } catch (e) {
+          saved = null;
+        }
+        applyTheme(saved);
+
+        var toggleBtn = document.getElementById("theme-toggle");
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", function () {
+            var current = root.getAttribute("data-theme") || "dark";
+            var next = current === "dark" ? "light" : "dark";
+            applyTheme(next);
+            try {
+              window.localStorage.setItem(STORAGE_KEY, next);
+            } catch (e) {
+              /* ignore */
+            }
+          });
+        }
+
+        var tradesToggle = document.getElementById("toggle-trades");
+        var tradesContainer = document.getElementById("trades-container");
+        if (tradesToggle && tradesContainer) {
+          tradesToggle.addEventListener("click", function () {
+            var isHidden = tradesContainer.style.display === "none";
+            tradesContainer.style.display = isHidden ? "block" : "none";
+            tradesToggle.textContent = isHidden
+              ? "Masquer les trades"
+              : "Afficher les trades";
+          });
+        }
+      })();
+    </script>
   </body>
-  </html>
-            
+</html>
