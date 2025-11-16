@@ -308,7 +308,7 @@ TODO COMPLET - Projet Trading Python : commenté = fait
     Enrichir la stabilité
     Dans stability_tests, à partir de summary et neighbors :
     Vérifier que robust_fraction est bien l’indicateur principal --> -->
-    <!-- Ajouter un label stability_robustness_label basé sur robust_fraction (ex. robuste si ≥ 0.7, sur‑ajusté si ≤ 0.4)
+<!-- Ajouter un label stability_robustness_label basé sur robust_fraction (ex. robuste si ≥ 0.7, sur‑ajusté si ≤ 0.4) -->
 <!-- 3. Propagation des nouvelles métriques dans les exports (CSV / HTML)
 
     Mettre à jour _export_wfa_results
@@ -371,19 +371,8 @@ TODO COMPLET - Projet Trading Python : commenté = fait
     Modifier _export_stability pour appeler render_stability_report au lieu de _build_html_report
     Conserver_build_html_report comme fallback générique
     Garder _build_html_report pour des usages simples (ou comme secours si Plotly échoue) -->
-6. Tests automatisés
-
-    Tests sur les nouvelles métriques WFA/OOS/Monte Carlo/Stability
-    Dans tests/unit/test_optimization/test_overfitting_check.py :
-    Ajouter un test pour vérifier que walk_forward_analysis remplit bien les champs degradation_ratio, frac_test_sharpe_lt_0, etc. dans summary
-    Ajouter un test pour _summarize_simulations qui vérifie p_sharpe_lt_0 / p_cagr_lt_0
-    Ajouter un test simple sur la logique de classification robustness_label (fonction pure ou helper dédié)
-    Tests sur le reporting
-    Ajouter un test pour render_overfitting_index qui vérifie que le badge HTML est bien présent en fonction de status
-    Ajouter des tests smoke (sans Plotly) pour render_oos_report, render_monte_carlo_report, render_stability_report :
-    - [ ] Vérifier que la fonction retourne bien un fichier HTML existant et non vide
-    - [ ] Vérifier que les tables sont bien présentes via quelques chaînes clés
-7. Documentation & ergonomie
+<!-- 6. tests -->
+<!-- 7. Documentation & ergonomie
 
     Mettre à jour doc/optimization.md (section “Prévention de l’overfitting”)
     Décrire les nouveaux indicateurs de robustesse (formules, interprétation)
@@ -393,13 +382,7 @@ TODO COMPLET - Projet Trading Python : commenté = fait
     - [ ] Ratios de dégradation, probabilités de sur‑ajustement, p‑values Monte Carlo
     - [ ] Rapports HTML enrichis avec graphiques
     (Option) Ajouter un petit paragraphe explicatif dans config/overfitting_*.yaml
-    Rappeler la signification des nouveaux indicateurs / seuils si certains sont paramétrables (ex. seuil drawdown, α)
-
-9.3 Hyperparameter tuning
-
- Grid search vs Bayesian
- Cross-validation temporelle
- Ensemble de paramètres
+    Rappeler la signification des nouveaux indicateurs / seuils si certains sont paramétrables (ex. seuil drawdown, α) -->
 
 🏗️ Phase 10 : Stratégies Avancées (Semaine 9-10)
 

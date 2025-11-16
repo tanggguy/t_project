@@ -16,7 +16,7 @@ t_project est un bac a sable de recherche systematique qui combine Backtrader, O
 - **Backtesting engine**: `backtesting/engine.py` encapsule Cerebro (brokers, analyzers, resampling) et se pilote via `scripts/run_backtest.py` (autodiscovery des strategies, multi ticker, generation de rapports).
 - **Portfolio analytics**: `backtesting/portfolio.py` agrege les rendements ponderes, calcule equity/log-returns/drawdown et normalise les poids.
 - **Position sizing**: `risk_management/position_sizing.py` expose fixed size, fixed fractional, volatility based (ATR). Les strategies peuvent aussi brancher des stops dynamiques depuis `risk_management/stop_loss.py` et `risk_management/take_profit.py`.
-- **Optimisation & robustesse**: `optimization/optuna_optimizer.py` prend en charge single ou multi objectif (`optimization/objectives.py`), contraintes custom, et cree `study` SQLite pour Optuna Dashboard. `optimization/overfitting_check.py` ajoute walk-forward, out-of-sample, Monte Carlo, tests de stabilite.
+- **Optimisation & robustesse**: `optimization/optuna_optimizer.py` prend en charge single ou multi objectif (`optimization/objectives.py`), contraintes custom, et cree `study` SQLite pour Optuna Dashboard. `optimization/overfitting_check.py` ajoute walk-forward, out-of-sample, Monte Carlo, tests de stabilite **et expose les indicateurs cles** : ratios de degradation (`Sharpe_test / Sharpe_train`), probabilites de sur-ajustement (folds avec `Sharpe_test < alpha * Sharpe_train`), p-values Monte Carlo (`p_sharpe_lt_0`, `p_cagr_lt_0`, `p_max_dd_gt_threshold`) + rapports HTML avec badges.
 - **Reporting / viz**: `reports/report_generator.py` + templates Jinja2 pour HTML, `reports/overfitting_report.py` pour les batteries de tests, `visualization/` (charts, performance_plots, optimization_plots, dashboard) pour analyses interactives.
 
 ## Installation
@@ -143,7 +143,11 @@ Chaque strategie herite de `BaseStrategy` et, pour la plupart, de `ManagedStrate
 ## Reporting et visualisation
 - Les rapports de backtest s'ecrivent dans `reports/generated/` avec equity, underwater, table trades et metriques (Sharpe, Sortino, Calmar, PnL, drawdown, expectancy).
 - Les resultats bruts (CSV/JSON) sont stockes dans `results/backtesting/` et `results/optimization/`.
-- `reports/overfitting_report.py` synthetise WFA/OOS/Monte Carlo/stabilite dans `results/overfitting/<run_id>/<timestamp>/`.
+- `reports/overfitting_report.py` synthetise WFA/OOS/Monte Carlo/stabilite dans `results/overfitting/<run_id>/<timestamp>/`. Chaque execution genere un `index.html` avec badges (robust, borderline, overfitted) qui renvoient vers des rapports detaillees et graphiques Plotly.
+  Exemple pour ouvrir l'index apres un run :
+  ```bash
+  python -m webbrowser results/overfitting/sma_managed_checks16110019/20251116-010101/index.html
+  ```
 - `visualization/dashboard.py` et `visualization/charts.py` peuvent etre plugges dans des notebooks ou un serveur Dash pour comparer plusieurs strategies.
 
 ## Tests et qualite

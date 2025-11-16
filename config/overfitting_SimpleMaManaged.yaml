@@ -44,8 +44,16 @@ optimization:
   output:
     best_params_path: "results/optimization/sma_managed_opt_best_params.yaml"
 
-# Section spécifique overfitting
+# Section specifique overfitting
 overfitting:
+  # ---
+  # Indicateurs calcules:
+  # - Walk-forward: ratios de degradation (Sharpe_test / Sharpe_train) et proba
+  #   de sur-ajustement via alpha (analytics.overfitting.wfa.alpha).
+  # - Monte Carlo: p-values `p_sharpe_lt_0`, `p_cagr_lt_0`, `p_max_dd_gt_threshold`
+  #   compares aux seuils definis dans config/settings.yaml (drawdown threshold = 0.30 par defaut).
+  # - Les badges des rapports HTML s'appuient sur analytics.overfitting.*.
+  # ---
   run_id: "sma_managed_checks16110019"
   output_dir: "results/overfitting"
 
@@ -85,4 +93,3 @@ overfitting:
     perturbation: 0.1
     steps: 3
     threshold: 0.95
-

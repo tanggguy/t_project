@@ -248,14 +248,49 @@ Bonnes optimisations !
 
 ## 9. Prévention de l'overfitting
 
-Un module dédié `optimization/overfitting_check.py` fournit plusieurs analyses avancées :
+`optimization/overfitting_check.py` regroupe les analyses de robustesse alimentées par Optuna et par les métriques configurées dans `config/settings.yaml`. Le module produit maintenant, pour chaque scénario, des **ratios de dégradation**, des **probabilités de sur-ajustement** et des **p-values Monte Carlo** utilisées pour colorer les badges « Robust / Borderline / Overfitted » des rapports HTML.
 
-- **Walk-forward ancré** avec ré-optimisation Optuna (`OverfittingChecker.walk_forward_analysis`).
-- **Tests out-of-sample** sur fenêtres glissantes ou explicites (`out_of_sample_test`).
-- **Simulation Monte Carlo** (bootstrap par blocs sur retours ou trades) pour estimer la distribution de performance (`monte_carlo_simulation`).
-- **Tests de stabilité locale** des hyperparamètres (`stability_tests`).
+### 9.1 Indicateurs de robustesse
 
-Les résultats sont exportés sous `results/overfitting/<run_id>/<timestamp>/` (CSV + mini rapport HTML). Exemple d’utilisation :
+#### Walk-forward ancré (WFA)
+- `degradation_ratio = mean(Sharpe_test) / mean(Sharpe_train)` : un ratio < 1 indique une perte de performance entre optimisation et validation.
+- `test_vs_train_gap = mean(Sharpe_test) - mean(Sharpe_train)` : gap absolu pour repérer la dérive.
+- `frac_test_sharpe_lt_0` : fraction de folds avec Sharpe test négatif.
+- `frac_test_sharpe_lt_alpha_train` : probabilité de sur-ajustement basée sur le seuil `alpha` (par défaut 0.5) défini dans `analytics.overfitting.wfa.alpha`. Un fold est dit “mauvais” si `Sharpe_test < alpha * Sharpe_train`.
+- Les seuils `robust_min` / `overfit_max` par indicateur se trouvent sous `analytics.overfitting.wfa.*`. Ils déterminent les badges affichés dans les rapports.
+
+#### Fenêtres out-of-sample (OOS)
+- `oos_degradation_ratio = mean(Sharpe_oos) / Sharpe_train_reference` où `Sharpe_train_reference` est issu du meilleur backtest in-sample.
+- Médiane / minimum des Sharpes OOS (`oos_sharpe_median`, `oos_sharpe_min`) et `frac_oos_sharpe_lt_0` (proportion de fenêtres négatives).
+- Les règles `analytics.overfitting.oos.mean_sharpe` et `analytics.overfitting.oos.frac_sharpe_lt_0` contrôlent les badges.
+
+#### Simulation Monte Carlo
+- Bootstrap par blocs sur retours ou trades (`source: returns/trades`) afin d’obtenir :
+  - `p_sharpe_lt_0` : proportion de simulations avec Sharpe négatif.
+  - `p_cagr_lt_0` : probabilité d’un CAGR négatif.
+  - `p_max_dd_gt_threshold` : probabilité que la perte maximale dépasse `max_drawdown.threshold` (0.30 par défaut).
+  - `prob_negative` : fréquence des trajectoires dont la valeur finale repasse sous le capital initial.
+- Ces probabilités font office de p-values Monte Carlo. Les règles associées se règlent dans `analytics.overfitting.monte_carlo.*`.
+
+#### Tests de stabilité locale
+- Génération de perturbations ±`perturbation`% sur chaque paramètre puis calcul du `robust_fraction` (part des variations dont le Sharpe reste ≥ `threshold`, 0.95 par défaut).
+- Les seuils se règlent via `analytics.overfitting.stability.robust_fraction`.
+
+### 9.2 Rapports HTML et badges
+
+Chaque exécution `run_overfitting.py` crée `results/overfitting/<run_id>/<timestamp>/index.html`. L’index liste les sections (WFA, OOS, Monte Carlo, Stability) sous forme de cartes avec badges colorés :
+
+```
+WFA (Robust)      → ratio 0.93, 8% de folds < α · train
+Monte Carlo (Borderline) → p_sharpe_lt_0 = 0.24, p_max_dd_gt_30% = 0.32
+Stability (Robust) → 87% de variations conservent ≥ 95% du Sharpe
+```
+
+Chaque carte pointe vers un rapport détaillé (`wfa_report.html`, `monte_carlo_report.html`, etc.) qui inclut tables CSV et graphiques Plotly (scatter train/test, histogrammes de simulations, heatmap des perturbations, etc.). En cas de dépendances Plotly absentes, un fallback HTML minimal est généré mais conserve les badges et les métriques.
+
+### 9.3 Exemple programmatique
+
+Les résultats peuvent aussi être récupérés directement en Python :
 
 ```python
 from optimization.overfitting_check import OverfittingChecker
@@ -281,4 +316,4 @@ checker = OverfittingChecker(
 wfa_summary = checker.walk_forward_analysis()
 ```
 
-Consultez le dossier de sorties pour les rapports WFA/OOS/Monte Carlo/Stabilité.
+Consultez ensuite `results/overfitting/<run_id>/<timestamp>/` pour les CSV (`*_summary.csv`, `*_folds.csv`, `monte_carlo_simulations.csv`, etc.) et l’index HTML enrichi de badges.
