@@ -20,7 +20,7 @@ optimization:
 
   data:
     ticker: "AAPL"
-    start_date: "2019-01-01"
+    start_date: "2018-01-01"
     end_date: "2025-11-01"
     interval: "1d"
     use_cache: true
@@ -46,12 +46,12 @@ optimization:
 
 # Section spécifique overfitting
 overfitting:
-  run_id: "sma_managed_checks12-01"
+  run_id: "sma_managed_checks16110019"
   output_dir: "results/overfitting"
 
   # Paramètres de re-optimisation (utilisés par WFA)
   optimization:
-    n_trials: 3
+    n_trials: 30
     sampler_seed: 42
     timeout: null
     storage: "sqlite:///results/optimization/wfa_studies.db"

@@ -4343,3 +4343,150 @@
 2025-11-15 22:22:05,836 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
 2025-11-15 22:22:05,838 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
 2025-11-15 22:22:05,857 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 00:08:56,482 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 00:08:56,486 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 00:08:56,490 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 00:08:56,492 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 00:08:56,494 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 00:08:56,496 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 00:08:56,518 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:11:20,708 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:11:20,712 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:11:20,717 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:11:20,719 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:11:20,721 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:11:20,723 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:11:20,745 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:12:11,665 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:12:11,669 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:12:11,674 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:12:11,681 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:12:11,686 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:12:11,690 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:12:11,744 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:26:51,670 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:26:51,675 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:26:51,678 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:26:51,682 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:26:51,685 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:26:51,689 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:26:51,731 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:29:03,199 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:29:03,202 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:29:03,205 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:29:03,208 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:29:03,211 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:29:03,215 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:29:03,256 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:55:10,699 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:55:10,705 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:55:10,709 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:55:10,713 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:55:10,717 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:55:10,722 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:55:10,771 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 01:56:08,424 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 01:56:08,429 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 01:56:08,435 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 01:56:08,439 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 01:56:08,443 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 01:56:08,448 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 01:56:08,498 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:03:47,057 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:03:47,059 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:03:47,061 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:03:47,063 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:03:47,065 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:03:47,068 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:03:47,090 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:04:33,821 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:04:33,823 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:04:33,825 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:04:33,827 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:04:33,830 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:04:33,833 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:04:33,864 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:05:13,390 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:05:13,393 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:05:13,396 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:05:13,398 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:05:13,400 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:05:13,401 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:05:13,420 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:08:52,178 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:08:52,181 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:08:52,184 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:08:52,189 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:08:52,192 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:08:52,195 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:08:52,238 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:10:54,335 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:10:54,337 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:10:54,339 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:10:54,340 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:10:54,342 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:10:54,344 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:10:54,363 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:12:58,752 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:12:58,754 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:12:58,756 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:12:58,758 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:12:58,760 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:12:58,763 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:12:58,782 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:13:18,615 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:13:18,617 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:13:18,619 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:13:18,621 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:13:18,623 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:13:18,625 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:13:18,645 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:13:45,013 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:13:45,017 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:13:45,020 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:13:45,023 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:13:45,028 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:13:45,031 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:13:45,072 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:17:46,536 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:17:46,539 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:17:46,542 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:17:46,546 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:17:46,549 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:17:46,554 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:17:46,593 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:19:33,706 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:19:33,711 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:19:33,714 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:19:33,717 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:19:33,721 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:19:33,725 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:19:33,770 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:20:18,904 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:20:18,906 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:20:18,908 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:20:18,910 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:20:18,912 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:20:18,914 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:20:18,932 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:20:43,879 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:20:43,883 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:20:43,888 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:20:43,891 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:20:43,895 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:20:43,898 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:20:43,946 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:26:36,489 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:26:36,492 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:26:36,493 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:26:36,495 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:26:36,498 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:26:36,501 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:26:36,519 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)
+2025-11-16 02:27:00,490 - risk_management.position_sizing - INFO - FixedSizer: size=10, cash=10000.00, price=102.00
+2025-11-16 02:27:00,494 - risk_management.position_sizing - INFO - FixedSizer: size=50, cash=10000.00, price=100.00
+2025-11-16 02:27:00,499 - risk_management.position_sizing - INFO - FixedSizer: size=100, cash=10000.00, price=100.00
+2025-11-16 02:27:00,503 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=66, risk_amount=200.00, risk_per_share=3.00, portfolio_value=10000.00
+2025-11-16 02:27:00,506 - risk_management.position_sizing - INFO - FixedFractionalSizer: size=10, risk_amount=5000.00, risk_per_share=1.00, portfolio_value=10000.00
+2025-11-16 02:27:00,508 - risk_management.position_sizing - WARNING - FixedFractionalSizer: risk_per_share invalide (0.0), retour à 0
+2025-11-16 02:27:00,548 - risk_management.position_sizing - DEBUG - VolatilityBasedSizer: ATR pas encore prêt (période de warmup)

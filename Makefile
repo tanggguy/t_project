@@ -47,7 +47,18 @@ optuna-dashboard sqlite:///results/optimization/optuna_studies.db --host 127.0.0
 
 ##overfitting
 Lance WFA, OOS, Monte Carlo :
-python scripts/run_overfitting.py --config config/overfitting_SimpleMaManaged.yaml
+python scripts/run_overfitting.py --config config/overfitting_SimpleMaManaged.yaml --use-best-params
+python scripts/run_overfitting.py --config config/overfitting_EmaTrend.yaml --use-best-params
+
 
 --use-best-params
 --checks wfa,oos,monte,stability
+
+
+##test
+Lancer les tests unitaires :
+pytest tests/
+avec couverture :
+pytest tests/unit/test_optimization/test_overfitting_check.py --cov=optimization.overfitting_check --cov-report=term-missing
+
+

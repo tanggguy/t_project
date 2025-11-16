@@ -16,7 +16,8 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from numbers import Integral
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
@@ -115,6 +116,8 @@ class OverfittingChecker:
             self.data_config.get("alignment", "intersection")
         ).lower()
         self.analytics_settings = self._load_analytics_settings()
+        self.overfitting_settings = self.analytics_settings.get("overfitting", {})
+        self.warmup_bars = self._determine_warmup_bars()
 
         self.run_id = run_id or self.strategy_class.__name__.lower()
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -211,7 +214,9 @@ class OverfittingChecker:
 
             train_result = self._run_backtest(train_dataset, best_params)
             test_dataset = self._slice_dataset(
-                test_slice.index.min(), test_slice.index.max()
+                test_slice.index.min(),
+                test_slice.index.max(),
+                include_warmup=True,
             )
             test_result = self._run_backtest(test_dataset, best_params)
 
@@ -246,6 +251,17 @@ class OverfittingChecker:
             ),
             "folds": fold_results,
         }
+        robustness = self._compute_wfa_robustness(summary, fold_results)
+        summary["robustness_summary"] = robustness
+        metrics = robustness.get("metrics", {}) or {}
+        summary["degradation_ratio"] = metrics.get("degradation_ratio")
+        summary["test_vs_train_gap"] = metrics.get("test_vs_train_gap")
+        summary["frac_test_sharpe_lt_0"] = metrics.get("frac_test_sharpe_lt_0")
+        summary["frac_test_sharpe_lt_alpha_train"] = metrics.get(
+            "frac_test_sharpe_lt_alpha_train"
+        )
+        summary["alpha"] = metrics.get("alpha")
+        summary["robustness_label"] = robustness.get("badge")
 
         self._export_wfa_results(fold_results, summary, out_dir)
         return summary
@@ -270,7 +286,7 @@ class OverfittingChecker:
         out_dir.mkdir(parents=True, exist_ok=True)
 
         for idx, (start, end) in enumerate(oos_windows, start=1):
-            subset = self._slice_dataset(start, end)
+            subset = self._slice_dataset(start, end, include_warmup=True)
             if self._is_dataset_empty(subset):
                 logger.warning(
                     "Fenêtre OOS ignorée (vide) %s -> %s",
@@ -295,13 +311,40 @@ class OverfittingChecker:
         sharpe_values = [
             self._as_float(entry["metrics"].get("sharpe_ratio")) for entry in results
         ]
+        oos_sharpe_mean = float(np.mean(sharpe_values))
+        oos_sharpe_std = (
+            float(np.std(sharpe_values, ddof=1)) if len(sharpe_values) > 1 else 0.0
+        )
+        frac_lt_zero = float(sum(val < 0.0 for val in sharpe_values)) / (
+            len(sharpe_values) or 1
+        )
+        oos_sharpe_min = float(min(sharpe_values)) if sharpe_values else 0.0
+        oos_sharpe_median = (
+            float(np.median(sharpe_values)) if sharpe_values else 0.0
+        )
+
+        reference_dataset = self._slice_dataset(None, None)
+        reference_result = self._run_backtest(reference_dataset, params)
+        reference_sharpe = self._as_float(
+            reference_result.metrics.get("sharpe_ratio")
+        )
+        degradation_ratio = (
+            oos_sharpe_mean / reference_sharpe if reference_sharpe > 0 else 0.0
+        )
+
         summary = {
-            "oos_sharpe_mean": float(np.mean(sharpe_values)),
-            "oos_sharpe_std": (
-                float(np.std(sharpe_values, ddof=1)) if len(sharpe_values) > 1 else 0.0
-            ),
+            "oos_sharpe_mean": oos_sharpe_mean,
+            "oos_sharpe_std": oos_sharpe_std,
             "windows": results,
+            "frac_oos_sharpe_lt_0": frac_lt_zero,
+            "oos_sharpe_min": oos_sharpe_min,
+            "oos_sharpe_median": oos_sharpe_median,
+            "train_sharpe_reference": reference_sharpe,
+            "oos_degradation_ratio": degradation_ratio,
         }
+        robustness = self._compute_oos_robustness(summary, results)
+        summary["robustness_summary"] = robustness
+        summary["robustness_label"] = robustness.get("badge")
 
         self._export_oos_results(results, summary, out_dir)
         return summary
@@ -363,9 +406,19 @@ class OverfittingChecker:
                 }
             )
 
-        summary = self._summarize_simulations(simulations)
+        dd_rules = self._get_overfitting_value(("monte_carlo", "max_drawdown"), {}) or {}
+        dd_threshold_raw = dd_rules.get("threshold")
+        dd_threshold = (
+            self._as_float(dd_threshold_raw) if dd_threshold_raw is not None else None
+        )
+        summary = self._summarize_simulations(
+            simulations, max_dd_threshold=dd_threshold
+        )
         out_dir = self.output_root / label
         out_dir.mkdir(parents=True, exist_ok=True)
+        robustness = self._compute_monte_carlo_robustness(summary)
+        summary["robustness_summary"] = robustness
+        summary["robustness_label"] = robustness.get("badge")
         self._export_monte_carlo(simulations, summary, out_dir, source)
 
         return {
@@ -397,7 +450,13 @@ class OverfittingChecker:
         results: List[Dict[str, Any]] = []
         for variation in variations:
             params = dict(base_params)
-            params.update(variation)
+            params.update(
+                {
+                    key: value
+                    for key, value in variation.items()
+                    if not key.startswith("__")
+                }
+            )
 
             bt_result = self._run_backtest(dataset, params)
             sharpe = bt_result.metrics.get("sharpe_ratio", 0.0)
@@ -424,6 +483,9 @@ class OverfittingChecker:
             ),
             "neighbors": results,
         }
+        robustness = self._compute_stability_robustness(summary)
+        summary["robustness_summary"] = robustness
+        summary["robustness_label"] = robustness.get("badge")
 
         out_dir = self.output_root / label
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -519,23 +581,99 @@ class OverfittingChecker:
         except Exception:
             return {}
 
+    def _determine_warmup_bars(self) -> int:
+        """Détermine le nombre de barres de warmup à préfixer aux datasets."""
+
+        override = self.optimization_config.get("warmup_bars")
+        if override is not None:
+            try:
+                return max(int(override), 0)
+            except (TypeError, ValueError):
+                return 0
+
+        inferred = self._infer_warmup_from_space()
+        if inferred > 0:
+            return inferred
+
+        settings_value = self.overfitting_settings.get("warmup_bars")
+        try:
+            return max(int(settings_value), 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _infer_warmup_from_space(self) -> int:
+        """Estime le warmup à partir des bornes supérieures du param_space."""
+
+        max_candidate = 0
+        for spec in self.param_space.values():
+            candidate = self._extract_int_upper_bound(spec)
+            if candidate is not None:
+                max_candidate = max(max_candidate, candidate)
+        return max_candidate
+
+    def _extract_int_upper_bound(self, spec: ParameterSpec) -> Optional[int]:
+        if isinstance(spec, dict):
+            high = spec.get("high")
+            if high is None:
+                return None
+            param_type = str(spec.get("type", "")).lower()
+            if param_type in {"int", "integer"} or isinstance(high, Integral):
+                return int(high)
+            if isinstance(high, float) and float(high).is_integer():
+                return int(high)
+            return None
+
+        if isinstance(spec, (list, tuple)):
+            values = list(spec)
+            if (
+                len(values) >= 2
+                and all(isinstance(v, (int, float)) for v in values[:2])
+            ):
+                high = values[1]
+                if isinstance(high, Integral):
+                    return int(high)
+                if isinstance(high, float) and float(high).is_integer():
+                    return int(high)
+            return None
+
+        if isinstance(spec, Integral):
+            return int(spec)
+        if isinstance(spec, float) and spec.is_integer():
+            return int(spec)
+
+        return None
+
     def _filter_data(
         self, start_date: Optional[str], end_date: Optional[str]
     ) -> pd.DataFrame:
         df = self.data
-        if start_date:
-            df = df.loc[pd.Timestamp(start_date) :]
-        if end_date:
-            df = df.loc[: pd.Timestamp(end_date)]
+        start_ts = self._normalize_timestamp(start_date)
+        end_ts = self._normalize_timestamp(end_date)
+        if start_ts is not None:
+            df = df.loc[start_ts:]
+        if end_ts is not None:
+            df = df.loc[:end_ts]
         return df
+
+    def _apply_warmup_offset(
+        self, timestamp: Optional[pd.Timestamp]
+    ) -> Optional[pd.Timestamp]:
+        if timestamp is None or self.warmup_bars <= 0:
+            return timestamp
+        return timestamp - pd.DateOffset(days=int(self.warmup_bars))
 
     def _slice_dataset(
         self,
         start: Optional[Union[str, pd.Timestamp]],
         end: Optional[Union[str, pd.Timestamp]],
+        *,
+        include_warmup: bool = False,
     ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
-        start_ts = pd.Timestamp(start) if start is not None else None
-        end_ts = pd.Timestamp(end) if end is not None else None
+        start_ts = self._normalize_timestamp(start)
+        end_ts = self._normalize_timestamp(end)
+
+        if include_warmup:
+            start_ts = self._apply_warmup_offset(start_ts)
 
         if not self.multi_ticker:
             return self._slice_frame(self.data, start_ts, end_ts)
@@ -559,6 +697,21 @@ class OverfittingChecker:
         if end is not None:
             result = result.loc[:end]
         return result
+
+    def _normalize_timestamp(
+        self, value: Optional[Union[str, pd.Timestamp]]
+    ) -> Optional[pd.Timestamp]:
+        if value is None:
+            return None
+        ts = pd.Timestamp(value)
+        data_tz = getattr(self.data.index, "tz", None)
+        if data_tz is None:
+            if ts.tzinfo is not None:
+                return ts.tz_convert(None)
+            return ts
+        if ts.tzinfo is None:
+            return ts.tz_localize(data_tz)
+        return ts.tz_convert(data_tz)
 
     def _is_dataset_empty(
         self, dataset: Union[pd.DataFrame, Dict[str, pd.DataFrame]]
@@ -705,6 +858,15 @@ class OverfittingChecker:
 
         metrics = self._gather_metrics(strat)
         returns_series = self._extract_returns(strat)
+        original_sharpe = metrics.get("sharpe_ratio")
+        try:
+            sharpe_value = float(original_sharpe)
+        except (TypeError, ValueError):
+            sharpe_value = None
+        if sharpe_value is None or not np.isfinite(sharpe_value):
+            fallback_sharpe = self._compute_sharpe_from_returns(returns_series)
+            if fallback_sharpe is not None:
+                metrics["sharpe_ratio"] = fallback_sharpe
         equity_series = self._build_equity_curve(
             returns_series,
             metrics.get("initial_capital", 1.0),
@@ -1011,6 +1173,18 @@ class OverfittingChecker:
             pass
         return pd.Series(dtype=float)
 
+    def _compute_sharpe_from_returns(
+        self, returns: pd.Series, periods_per_year: int = 252
+    ) -> Optional[float]:
+        if returns is None or returns.empty:
+            return None
+        mean = float(returns.mean())
+        std = float(returns.std(ddof=1))
+        if not np.isfinite(mean) or not np.isfinite(std) or std == 0:
+            return None
+        sharpe = (mean / std) * np.sqrt(periods_per_year)
+        return float(sharpe) if np.isfinite(sharpe) else None
+
     def _extract_trades(self, strat: BaseStrategy) -> pd.DataFrame:
         try:
             trade_list = strat.analyzers.tradelist.get_analysis()
@@ -1110,7 +1284,10 @@ class OverfittingChecker:
         }
 
     def _summarize_simulations(
-        self, simulations: Sequence[Dict[str, float]]
+        self,
+        simulations: Sequence[Dict[str, float]],
+        *,
+        max_dd_threshold: Optional[float] = None,
     ) -> Dict[str, Any]:
         df = pd.DataFrame(simulations)
         summary: Dict[str, Any] = {}
@@ -1124,6 +1301,18 @@ class OverfittingChecker:
         summary["prob_negative"] = (
             float(df["prob_negative"].mean()) if "prob_negative" in df else 0.0
         )
+        summary["p_sharpe_lt_0"] = (
+            float((df["sharpe_ratio"] < 0.0).mean()) if "sharpe_ratio" in df else 0.0
+        )
+        summary["p_cagr_lt_0"] = (
+            float((df["cagr"] < 0.0).mean()) if "cagr" in df else 0.0
+        )
+        if max_dd_threshold is not None and "max_drawdown" in df:
+            summary["p_max_dd_gt_threshold"] = float(
+                (df["max_drawdown"].astype(float) > float(max_dd_threshold)).mean()
+            )
+        else:
+            summary["p_max_dd_gt_threshold"] = 0.0
         return summary
 
     def _generate_param_variations(
@@ -1182,12 +1371,19 @@ class OverfittingChecker:
         name: str,
         description: str,
         relative_path: str,
+        badge: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> None:
+        status_value = status or badge
         entry = {
             "name": name,
             "description": description,
             "path": relative_path,
         }
+        if badge:
+            entry["badge"] = badge
+        if status_value:
+            entry["status"] = status_value
         # Remplacer si même path déjà présent
         self._report_sections = [
             sec for sec in self._report_sections if sec.get("path") != relative_path
@@ -1202,6 +1398,230 @@ class OverfittingChecker:
         except Exception:  # pragma: no cover - fallback silencieux
             logger.debug("Impossible de générer l'index overfitting.", exc_info=True)
 
+    def export_global_summary(
+        self,
+        *,
+        wfa: Optional[Dict[str, Any]] = None,
+        oos: Optional[Dict[str, Any]] = None,
+        monte_carlo: Optional[Dict[str, Any]] = None,
+        stability: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Path]:
+        summaries = {
+            "wfa": wfa,
+            "oos": oos,
+            "monte_carlo": monte_carlo,
+            "stability": stability,
+        }
+        filtered = {key: value for key, value in summaries.items() if value is not None}
+        if not filtered:
+            return None
+
+        payload: Dict[str, Any] = {
+            "meta": {
+                "run_id": self.run_id,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        }
+        payload.update(filtered)
+
+        summary_path = self.output_root / "summary.json"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                indent=2,
+                default=self._json_default,
+            ),
+            encoding="utf-8",
+        )
+        return summary_path
+
+    def _json_default(self, value: Any) -> Any:
+        if isinstance(value, (datetime, date)):
+            return value.isoformat()
+        if isinstance(value, Path):
+            return str(value)
+        if isinstance(value, np.generic):
+            return value.item()
+        if isinstance(value, pd.Timestamp):
+            return value.isoformat()
+        if isinstance(value, pd.Series):
+            return value.astype(object).tolist()
+        if isinstance(value, pd.DataFrame):
+            return value.to_dict(orient="records")
+        return str(value)
+
+    # ------------------------------------------------------------------ #
+    # Robustness scoring helpers
+    # ------------------------------------------------------------------ #
+    def _get_overfitting_value(self, path: Sequence[str], default: Any = None) -> Any:
+        data: Any = self.overfitting_settings
+        for key in path:
+            if not isinstance(data, dict):
+                return default
+            data = data.get(key)
+            if data is None:
+                return default
+        return data
+
+    def _resolve_badge(self, *, robust: bool, overfit: bool) -> str:
+        if robust:
+            return "robust"
+        if overfit:
+            return "overfitted"
+        return "borderline"
+
+    def _compute_wfa_robustness(
+        self, summary: Dict[str, Any], folds: Sequence[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        train_mean = self._as_float(summary.get("train_sharpe_mean"))
+        test_mean = self._as_float(summary.get("test_sharpe_mean"))
+        degradation_ratio = test_mean / train_mean if train_mean > 0 else 0.0
+        test_vs_train_gap = test_mean - train_mean
+
+        train_sharpes = [
+            self._as_float(fold["train_metrics"].get("sharpe_ratio")) for fold in folds
+        ]
+        test_sharpes = [
+            self._as_float(fold["test_metrics"].get("sharpe_ratio")) for fold in folds
+        ]
+        total_folds = len(test_sharpes) or 1
+        frac_test_lt_zero = float(sum(val < 0.0 for val in test_sharpes)) / total_folds
+
+        alpha = float(self._get_overfitting_value(("wfa", "alpha"), 0.5))
+        frac_test_lt_alpha = (
+            float(
+                sum(
+                    1
+                    for train_val, test_val in zip(train_sharpes, test_sharpes)
+                    if test_val < alpha * train_val
+                )
+            )
+            / total_folds
+            if test_sharpes
+            else 0.0
+        )
+
+        ratio_rules = self._get_overfitting_value(("wfa", "degradation_ratio"), {}) or {}
+        frac_rules = self._get_overfitting_value(
+            ("wfa", "frac_test_sharpe_lt_alpha_train"), {}
+        ) or {}
+        robust = (
+            degradation_ratio >= float(ratio_rules.get("robust_min", 0.8))
+            and frac_test_lt_alpha <= float(frac_rules.get("robust_max", 0.2))
+        )
+        overfit = (
+            degradation_ratio <= float(ratio_rules.get("overfit_max", 0.5))
+            or frac_test_lt_alpha >= float(frac_rules.get("overfit_min", 0.5))
+        )
+
+        metrics = {
+            "degradation_ratio": degradation_ratio,
+            "test_vs_train_gap": test_vs_train_gap,
+            "frac_test_sharpe_lt_0": frac_test_lt_zero,
+            "frac_test_sharpe_lt_alpha_train": frac_test_lt_alpha,
+            "alpha": alpha,
+        }
+        return {
+            "badge": self._resolve_badge(robust=robust, overfit=overfit),
+            "metrics": metrics,
+        }
+
+    def _compute_oos_robustness(
+        self, summary: Dict[str, Any], windows: Sequence[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        sharpe_values = [
+            self._as_float(entry["metrics"].get("sharpe_ratio")) for entry in windows
+        ]
+        count = len(sharpe_values) or 1
+        frac_lt_zero = float(sum(val < 0.0 for val in sharpe_values)) / count
+        oos_sharpe_min = float(min(sharpe_values)) if sharpe_values else 0.0
+        oos_sharpe_median = (
+            float(np.median(sharpe_values)) if sharpe_values else 0.0
+        )
+        oos_mean = self._as_float(summary.get("oos_sharpe_mean"))
+
+        mean_rules = self._get_overfitting_value(("oos", "mean_sharpe"), {}) or {}
+        frac_rules = self._get_overfitting_value(("oos", "frac_sharpe_lt_0"), {}) or {}
+        robust = (
+            oos_mean >= float(mean_rules.get("robust_min", 1.0))
+            and frac_lt_zero <= float(frac_rules.get("robust_max", 0.2))
+        )
+        overfit = (
+            oos_mean <= float(mean_rules.get("overfit_max", 0.5))
+            or frac_lt_zero >= float(frac_rules.get("overfit_min", 0.5))
+        )
+
+        metrics = {
+            "frac_oos_sharpe_lt_0": frac_lt_zero,
+            "oos_sharpe_min": oos_sharpe_min,
+            "oos_sharpe_median": oos_sharpe_median,
+            "oos_degradation_ratio": summary.get("oos_degradation_ratio"),
+            "train_sharpe_reference": summary.get("train_sharpe_reference"),
+        }
+        return {
+            "badge": self._resolve_badge(robust=robust, overfit=overfit),
+            "metrics": metrics,
+        }
+
+    def _compute_monte_carlo_robustness(self, summary: Dict[str, Any]) -> Dict[str, Any]:
+        p_sharpe = self._as_float(summary.get("p_sharpe_lt_0"))
+        p_cagr = self._as_float(summary.get("p_cagr_lt_0"))
+        sharpe_rules = self._get_overfitting_value(
+            ("monte_carlo", "p_sharpe_lt_0"), {}
+        ) or {}
+        cagr_rules = self._get_overfitting_value(
+            ("monte_carlo", "p_cagr_lt_0"), {}
+        ) or {}
+        dd_rules = self._get_overfitting_value(
+            ("monte_carlo", "max_drawdown"), {}
+        ) or {}
+        dd_threshold_raw = dd_rules.get("threshold")
+        dd_threshold = (
+            self._as_float(dd_threshold_raw) if dd_threshold_raw is not None else None
+        )
+        p_dd = self._as_float(summary.get("p_max_dd_gt_threshold"))
+
+        robust = (
+            p_sharpe <= float(sharpe_rules.get("robust_max", 0.2))
+            and p_cagr <= float(cagr_rules.get("robust_max", 0.2))
+        )
+        overfit = (
+            p_sharpe >= float(sharpe_rules.get("overfit_min", 0.5))
+            or p_cagr >= float(cagr_rules.get("overfit_min", 0.5))
+        )
+        if dd_threshold is not None:
+            robust = robust and (
+                p_dd <= float(dd_rules.get("robust_max", 0.2))
+            )
+            overfit = overfit or (
+                p_dd >= float(dd_rules.get("overfit_min", 0.5))
+            )
+        metrics = {
+            "p_sharpe_lt_0": p_sharpe,
+            "p_cagr_lt_0": p_cagr,
+            "prob_negative": self._as_float(summary.get("prob_negative")),
+            "p_max_dd_gt_threshold": p_dd,
+        }
+        if dd_threshold is not None:
+            metrics["max_dd_threshold"] = dd_threshold
+        return {
+            "badge": self._resolve_badge(robust=robust, overfit=overfit),
+            "metrics": metrics,
+        }
+
+    def _compute_stability_robustness(self, summary: Dict[str, Any]) -> Dict[str, Any]:
+        robust_fraction = self._as_float(summary.get("robust_fraction"))
+        rules = self._get_overfitting_value(("stability", "robust_fraction"), {}) or {}
+        robust = robust_fraction >= float(rules.get("robust_min", 0.8))
+        overfit = robust_fraction <= float(rules.get("overfit_max", 0.5))
+        metrics = {"robust_fraction": robust_fraction}
+        return {
+            "badge": self._resolve_badge(robust=robust, overfit=overfit),
+            "metrics": metrics,
+        }
+
     # ------------------------------------------------------------------ #
     # Export helpers
     # ------------------------------------------------------------------ #
@@ -1212,9 +1632,19 @@ class OverfittingChecker:
         out_dir: Path,
     ) -> None:
         rows = []
+        alpha = self._as_float(summary.get("alpha"))
+        if alpha <= 0:
+            alpha = self._as_float(
+                self._get_overfitting_value(("wfa", "alpha"), 0.5), 0.5
+            )
         for fold in folds:
             train_metrics = fold["train_metrics"]
             test_metrics = fold["test_metrics"]
+            train_sharpe = self._as_float(train_metrics.get("sharpe_ratio"))
+            test_sharpe = self._as_float(test_metrics.get("sharpe_ratio"))
+            is_bad_fold = (test_sharpe < 0.0) or (
+                train_sharpe > 0.0 and test_sharpe < alpha * train_sharpe
+            )
             rows.append(
                 {
                     "fold": fold["fold"],
@@ -1222,13 +1652,14 @@ class OverfittingChecker:
                     "train_end": fold["train_end"],
                     "test_start": fold["test_start"],
                     "test_end": fold["test_end"],
-                    "train_sharpe": train_metrics.get("sharpe_ratio"),
-                    "test_sharpe": test_metrics.get("sharpe_ratio"),
+                    "train_sharpe": train_sharpe,
+                    "test_sharpe": test_sharpe,
                     "train_total_trades": train_metrics.get("total_trades"),
                     "test_total_trades": test_metrics.get("total_trades"),
                     "train_max_dd": train_metrics.get("max_drawdown"),
                     "test_max_dd": test_metrics.get("max_drawdown"),
                     "best_params": json.dumps(fold["best_params"]),
+                    "is_bad_fold": is_bad_fold,
                 }
             )
 
@@ -1236,6 +1667,8 @@ class OverfittingChecker:
         csv_path = out_dir / "wfa_folds.csv"
         df.to_csv(csv_path, index=False)
 
+        robustness = summary.get("robustness_summary", {}) or {}
+        metrics = robustness.get("metrics", {}) or {}
         summary_df = pd.DataFrame(
             [
                 {
@@ -1243,6 +1676,14 @@ class OverfittingChecker:
                     "train_sharpe_std": summary["train_sharpe_std"],
                     "test_sharpe_mean": summary["test_sharpe_mean"],
                     "test_sharpe_std": summary["test_sharpe_std"],
+                    "degradation_ratio": metrics.get("degradation_ratio"),
+                    "test_vs_train_gap": metrics.get("test_vs_train_gap"),
+                    "frac_test_sharpe_lt_0": metrics.get("frac_test_sharpe_lt_0"),
+                    "frac_test_sharpe_lt_alpha_train": metrics.get(
+                        "frac_test_sharpe_lt_alpha_train"
+                    ),
+                    "robustness_label": summary.get("robustness_label"),
+                    "wfa_robustness_label": summary.get("robustness_label"),
                 }
             ]
         )
@@ -1272,6 +1713,7 @@ class OverfittingChecker:
             name="Walk-Forward Analysis",
             description="Résultats train/test par fold et métriques agrégées.",
             relative_path=str(relative_path).replace("\\", "/"),
+            badge=robustness.get("badge"),
         )
 
     def _export_oos_results(
@@ -1297,23 +1739,51 @@ class OverfittingChecker:
         df = pd.DataFrame(rows)
         df.to_csv(out_dir / "oos_results.csv", index=False)
 
+        robustness = summary.get("robustness_summary", {}) or {}
+        metrics = robustness.get("metrics", {}) or {}
         summary_df = pd.DataFrame(
             [
                 {
                     "oos_sharpe_mean": summary["oos_sharpe_mean"],
                     "oos_sharpe_std": summary["oos_sharpe_std"],
+                    "frac_oos_sharpe_lt_0": metrics.get("frac_oos_sharpe_lt_0"),
+                    "oos_sharpe_min": metrics.get("oos_sharpe_min"),
+                    "oos_sharpe_median": metrics.get("oos_sharpe_median"),
+                    "oos_degradation_ratio": summary.get("oos_degradation_ratio"),
+                    "train_sharpe_reference": summary.get("train_sharpe_reference"),
+                    "robustness_label": summary.get("robustness_label"),
+                    "oos_robustness_label": summary.get("robustness_label"),
                 }
             ]
         )
         summary_df.to_csv(out_dir / "oos_summary.csv", index=False)
 
         html_path = out_dir / "oos_report.html"
-        html_content = self._build_html_report(
-            title="Out-of-Sample Testing",
-            summary_table=summary_df,
-            details_table=df,
+        try:
+            overfitting_report.render_oos_report(
+                summary_df=summary_df,
+                windows_df=df,
+                output_path=html_path,
+            )
+        except Exception:  # pragma: no cover - fallback HTML simple
+            logger.debug("Plotly/Jinja indisponible pour OOS, fallback HTML.", exc_info=True)
+            html_content = self._build_html_report(
+                title="Out-of-Sample Testing",
+                summary_table=summary_df,
+                details_table=df,
+            )
+            html_path.write_text(html_content, encoding="utf-8")
+
+        try:
+            relative_path = html_path.relative_to(self.output_root)
+        except ValueError:
+            relative_path = Path(html_path.name)
+        self._register_report_section(
+            name="Out-of-Sample",
+            description="Fenêtres OOS individuelles et métriques synthétiques.",
+            relative_path=str(relative_path).replace("\\", "/"),
+            badge=robustness.get("badge"),
         )
-        html_path.write_text(html_content, encoding="utf-8")
 
     def _export_monte_carlo(
         self,
@@ -1324,15 +1794,45 @@ class OverfittingChecker:
     ) -> None:
         df = pd.DataFrame(simulations)
         df.to_csv(out_dir / "monte_carlo_simulations.csv", index=False)
-        summary_df = pd.DataFrame([summary])
+        robustness = summary.get("robustness_summary", {}) or {}
+        summary_row = {
+            key: value for key, value in summary.items() if key != "robustness_summary"
+        }
+        summary_row["robustness_label"] = summary.get("robustness_label")
+        summary_row["monte_carlo_robustness_label"] = summary.get("robustness_label")
+        for key, value in (robustness.get("metrics") or {}).items():
+            summary_row.setdefault(key, value)
+        summary_df = pd.DataFrame([summary_row])
         summary_df.to_csv(out_dir / "monte_carlo_summary.csv", index=False)
 
-        html_content = self._build_html_report(
-            title=f"Monte Carlo ({source})",
-            summary_table=summary_df,
-            details_table=df,
+        report_path = out_dir / "monte_carlo_report.html"
+        try:
+            overfitting_report.render_monte_carlo_report(
+                summary_df=summary_df,
+                simulations_df=df,
+                output_path=report_path,
+                title=f"Monte Carlo ({source})",
+            )
+        except Exception:  # pragma: no cover - fallback HTML simple
+            logger.debug(
+                "Plotly/Jinja indisponible pour Monte Carlo, fallback HTML.", exc_info=True
+            )
+            html_content = self._build_html_report(
+                title=f"Monte Carlo ({source})",
+                summary_table=summary_df,
+                details_table=df,
+            )
+            report_path.write_text(html_content, encoding="utf-8")
+        try:
+            relative_path = report_path.relative_to(self.output_root)
+        except ValueError:
+            relative_path = Path(report_path.name)
+        self._register_report_section(
+            name=f"Monte Carlo ({source})",
+            description="Distribution simulée des métriques de performance.",
+            relative_path=str(relative_path).replace("\\", "/"),
+            badge=robustness.get("badge"),
         )
-        (out_dir / "monte_carlo_report.html").write_text(html_content, encoding="utf-8")
 
     def _export_stability(
         self,
@@ -1344,22 +1844,47 @@ class OverfittingChecker:
         df.drop(columns=["metrics"], inplace=True, errors="ignore")
         df.to_csv(out_dir / "stability_neighbors.csv", index=False)
 
+        robustness = summary.get("robustness_summary", {}) or {}
         summary_df = pd.DataFrame(
             [
                 {
                     "base_sharpe": summary["base_metric"],
                     "robust_fraction": summary["robust_fraction"],
+                    "robustness_label": summary.get("robustness_label"),
+                    "stability_robustness_label": summary.get("robustness_label"),
                 }
             ]
         )
         summary_df.to_csv(out_dir / "stability_summary.csv", index=False)
 
-        html_content = self._build_html_report(
-            title="Stability Tests",
-            summary_table=summary_df,
-            details_table=df,
+        report_path = out_dir / "stability_report.html"
+        try:
+            overfitting_report.render_stability_report(
+                summary_df=summary_df,
+                neighbors_df=df,
+                output_path=report_path,
+            )
+        except Exception:  # pragma: no cover - fallback HTML simple
+            logger.debug(
+                "Plotly/Jinja indisponible pour la stabilité, fallback HTML.", exc_info=True
+            )
+            html_content = self._build_html_report(
+                title="Stability Tests",
+                summary_table=summary_df,
+                details_table=df,
+            )
+            report_path.write_text(html_content, encoding="utf-8")
+
+        try:
+            relative_path = report_path.relative_to(self.output_root)
+        except ValueError:
+            relative_path = Path(report_path.name)
+        self._register_report_section(
+            name="Stability",
+            description="Sensibilité locale des hyperparamètres.",
+            relative_path=str(relative_path).replace("\\", "/"),
+            badge=robustness.get("badge"),
         )
-        (out_dir / "stability_report.html").write_text(html_content, encoding="utf-8")
 
     def _build_html_report(
         self,

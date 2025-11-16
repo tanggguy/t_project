@@ -1,0 +1,91 @@
+optimization:
+  strategy:
+    name: "EmaTrend"
+    module: "strategies.implementations.ema_trend_strategy"
+    class_name: "EmaTrendStrategy"
+    fixed_params:
+      use_stop_loss: true
+      stop_loss_type: "atr"
+      use_take_profit: true
+      take_profit_type: "atr"
+    param_space:
+      ema_trend: [150, 300, 10]
+      ema_fast: [8, 20, 1]
+      ema_slow: [20, 40, 2]
+      stop_loss_atr_mult:
+        type: "float"
+        low: 2.0
+        high: 3.5
+        step: 0.25
+      take_profit_atr_mult:
+        type: "float"
+        low: 4.0
+        high: 6.0
+        step: 0.25
+      atr_period: [10, 20, 1]
+
+  data:
+    tickers:
+      - "AAPL"
+      # - "MSFT"
+      # - "GOOG"
+      # - "JPM"
+      # - "XOM"
+    start_date: "2015-01-01"
+    end_date: "2025-11-01"
+    interval: "1d"
+    use_cache: true
+
+  broker:
+    initial_capital: 10000.0
+    commission_pct: 0.0005
+    slippage_pct: 0.0005
+
+  position_sizing:
+    enabled: false
+    method: "fixed"
+    fixed:
+      pct_size: 0.4
+
+  output:
+    best_params_path: "results/optimization/ema_trend_opt_best_params.yaml"
+
+overfitting:
+  run_id: "ema_trend_checks16110100"
+  output_dir: "results/overfitting"
+
+  optimization:
+    n_trials: 3
+    sampler_seed: 42
+    timeout: null
+    storage: "sqlite:///results/optimization/wfa_studies.db"
+    penalty_value: -1.0
+    min_trades: 5
+    enforce_fast_slow_gap: true
+
+  wfa:
+    enabled: true
+    fold_config:
+      train_years: 4
+      test_months: 18
+      step_months: 12
+
+  oos:
+    enabled: true
+    windows:
+      - ["2023-01-01", "2023-12-31"]
+      - ["2024-01-01", "2024-12-31"]
+    years: 1
+
+  monte_carlo:
+    enabled: true
+    source: "returns"
+    n_simulations: 1000
+    block_size: 5
+    seed: 42
+
+  stability:
+    enabled: true
+    perturbation: 0.1
+    steps: 3
+    threshold: 0.95

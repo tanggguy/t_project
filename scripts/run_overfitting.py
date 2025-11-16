@@ -166,15 +166,16 @@ def run_checks(
     *,
     use_best_params: bool,
     checks: Optional[list[str]] = None,
-) -> None:
+) -> Optional[Path]:
     checks = [c.strip().lower() for c in (checks or []) if c and c.strip()] or []
     want_all = not checks
+    summaries: Dict[str, Any] = {}
 
     # WFA (re-optim par fold)
     wfa_cfg = overfit_cfg.get("wfa") or {}
     if (want_all and wfa_cfg.get("enabled", True)) or ("wfa" in checks):
         logger.info("[WFA] Démarrage walk-forward analysis…")
-        checker.walk_forward_analysis(
+        summaries["wfa"] = checker.walk_forward_analysis(
             fold_config=wfa_cfg.get("fold_config") or {},
             label="wfa",
         )
@@ -193,7 +194,7 @@ def run_checks(
             logger.warning("[OOS] params manquants. Ignoré (utiliser --use-best-params).")
         else:
             logger.info("[OOS] Démarrage out-of-sample tests…")
-            checker.out_of_sample_test(
+            summaries["oos"] = checker.out_of_sample_test(
                 params_for_tests,
                 windows=oos_cfg.get("windows"),
                 years=int(oos_cfg.get("years", 1)),
@@ -207,7 +208,7 @@ def run_checks(
             logger.warning("[Monte Carlo] params manquants. Ignoré (utiliser --use-best-params).")
         else:
             logger.info("[Monte Carlo] Démarrage simulations…")
-            checker.monte_carlo_simulation(
+            mc_result = checker.monte_carlo_simulation(
                 params_for_tests,
                 source=str(mc_cfg.get("source", "returns")),
                 n_simulations=int(mc_cfg.get("n_simulations", 1000)),
@@ -215,6 +216,7 @@ def run_checks(
                 seed=mc_cfg.get("seed"),
                 label="monte_carlo",
             )
+            summaries["monte_carlo"] = mc_result.get("summary")
 
     # Stabilité
     stab_cfg = overfit_cfg.get("stability") or {}
@@ -223,13 +225,23 @@ def run_checks(
             logger.warning("[Stability] params manquants. Ignoré (utiliser --use-best-params).")
         else:
             logger.info("[Stability] Démarrage tests de stabilité…")
-            checker.stability_tests(
+            summaries["stability"] = checker.stability_tests(
                 params_for_tests,
                 perturbation=float(stab_cfg.get("perturbation", 0.1)),
                 steps=int(stab_cfg.get("steps", 3)),
                 threshold=float(stab_cfg.get("threshold", 0.95)),
                 label="stability",
             )
+
+    summary_path = checker.export_global_summary(
+        wfa=summaries.get("wfa"),
+        oos=summaries.get("oos"),
+        monte_carlo=summaries.get("monte_carlo"),
+        stability=summaries.get("stability"),
+    )
+    if summary_path:
+        logger.info("Résumé global exporté: %s", summary_path)
+    return summary_path
 
 
 def parse_args() -> argparse.Namespace:
@@ -250,7 +262,7 @@ def main() -> None:
 
     checker, optimization_cfg, overfit_cfg = build_checker(config)
     checks = args.checks.split(",") if args.checks else None
-    run_checks(
+    summary_path = run_checks(
         checker,
         optimization_cfg,
         overfit_cfg,
@@ -260,8 +272,9 @@ def main() -> None:
 
     print("\n=== OVERFITTING CHECKS TERMINÉS ===")
     print(f"Sorties: {checker.output_root}")
+    if summary_path:
+        print(f"Résumé global: {summary_path}")
 
 
 if __name__ == "__main__":
     main()
-

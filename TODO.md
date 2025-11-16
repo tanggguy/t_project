@@ -265,6 +265,135 @@ TODO COMPLET - Projet Trading Python : commenté = fait
  Optimisation multi-objectifs
  Trade-off return/risque
  Contraintes custom -->
+<!-- Amelioration module overffiting :
+    1. Conception des métriques d’overfitting / robustesse
+
+    Définir les indicateurs WFA/OOS cibles
+    degradation_ratio = test_sharpe_mean / train_sharpe_mean
+    test_vs_train_gap = test_sharpe_mean - train_sharpe_mean
+    Fréquence de folds “mauvais” :
+    - [ ] frac_test_sharpe_lt_0 = proportion de folds avec test_sharpe < 0
+    - [ ] frac_test_sharpe_lt_alpha_train = proportion de folds avec test_sharpe < α * train_sharpe (choisir α, ex. 0.5)
+    Définir les zones qualitatives (“badge” de robustesse)
+    Choisir des seuils pour degradation_ratio et frac_test_sharpe_lt_alpha_train, ex :
+    - [ ] Robuste : degradation_ratio >= 0.8 et frac_test_sharpe_lt_alpha_train <= 0.2
+    - [ ] Borderline : entre les 2 zones
+    - [ ] Sur‑ajusté : degradation_ratio <= 0.5 ou frac_test_sharpe_lt_alpha_train >= 0.5
+    Définir les indicateurs Monte Carlo cibles
+    p_sharpe_lt_0 = proportion des simulations avec sharpe_ratio < 0
+    p_cagr_lt_0 = proportion des simulations avec cagr < 0
+    
+    <!-- Décider où stocker les scores de synthèse
+    Ajouter un petit bloc robustness_summary dans les dictionnaires summary WFA/OOS/Monte Carlo/stabilité
+    <!-- Prévoir d’utiliser ces champs dans overfitting_report.render_overfitting_index pour afficher les badges --> -->
+<!-- 2. Implémentation des nouvelles métriques côté OverfittingChecker
+
+    Enrichir le résumé WFA (optimization/overfitting_check.py)
+    Dans walk_forward_analysis, après calcul des listes train_sharpes / test_sharpes et fold_results :
+    Calculer degradation_ratio, test_vs_train_gap
+    Calculer frac_test_sharpe_lt_0 et frac_test_sharpe_lt_alpha_train
+    Ajouter ces valeurs dans summary (ex. clés "degradation_ratio", "frac_test_sharpe_lt_0", etc.)
+    Déterminer un champ de statut global WFA : "robustness_label": "robust" | "borderline" | "overfitted"
+    Enrichir les tests OOS
+    Dans out_of_sample_test, à partir des sharpe_values :
+    Calculer frac_oos_sharpe_lt_0
+    Calculer éventuellement oos_degradation_ratio si tu peux rapprocher oos_sharpe_mean d’un train_sharpe_mean (option : utiliser la moyenne des Sharpe train sur la période globale)
+    Ajouter ces statistiques dans summary (et un éventuel oos_robustness_label)
+    Enrichir le résumé Monte Carlo
+    Dans _summarize_simulations, à partir du DataFrame df :
+    Ajouter p_sharpe_lt_0 = (df["sharpe_ratio"] < 0).mean()
+    Ajouter p_cagr_lt_0 = (df["cagr"] < 0).mean()
+    Si décision sur un seuil de drawdown, ajouter p_max_dd_gt_threshold
+    (Optionnel) Calculer un monte_carlo_robustness_label basé sur ces probabilités
+    Enrichir la stabilité
+    Dans stability_tests, à partir de summary et neighbors :
+    Vérifier que robust_fraction est bien l’indicateur principal --> -->
+    <!-- Ajouter un label stability_robustness_label basé sur robust_fraction (ex. robuste si ≥ 0.7, sur‑ajusté si ≤ 0.4)
+<!-- 3. Propagation des nouvelles métriques dans les exports (CSV / HTML)
+
+    Mettre à jour _export_wfa_results
+    Ajouter les nouvelles colonnes dans summary_df (degradation_ratio, frac_test_sharpe_lt_0, etc.)
+    Option : ajouter les indicateurs de “mauvais fold” par ligne si utile (ex. booléen is_bad_fold)
+    Mettre à jour _export_oos_results
+    Ajouter les colonnes OOS dans summary_df (frac_oos_sharpe_lt_0, oos_robustness_label, …)
+    S’assurer que les CSV gardent un format simple (une seule ligne de résumé)
+    Mettre à jour _export_monte_carlo
+    Ajouter p_sharpe_lt_0, p_cagr_lt_0, etc. aux colonnes de summary_df
+    Vérifier que les CSV restent lisibles et exploitables (nom de colonnes explicite)
+    Mettre à jour _export_stability
+    Ajouter stability_robustness_label dans summary_df
+    (Option) Ajouter un summary.json global
+    Créer un helper qui agrège les summary de WFA/OOS/Monte Carlo/Stability
+    Sauvegarder ce JSON dans self.output_root / "summary.json" (utile pour des dashboards externes) --> -->
+<!-- 4. Enrichissement de l’index Overfitting HTML
+
+    Adapter _register_report_section (optimization/overfitting_check.py)
+    Étendre l’entrée entry pour inclure un champ optionnel status (ex. "robust", "borderline", "overfitted")
+    Passer ce status au moment de l’appel pour chaque type de rapport (WFA/OOS/Monte Carlo/Stability)
+    Adapter render_overfitting_index (reports/overfitting_report.py)
+    Modifier la signature pour accepter un status par section (conserver la rétro‑compatibilité)
+    Dans la génération HTML des cartes :
+    Afficher un badge coloré en fonction de status (par ex. petit <span> avec classes CSS)
+    Définir dans_BASE_STYLE des styles simples pour les badges :
+    - badge-robust (vert doux)
+    - badge-borderline (orange)
+    - badge-overfitted (rouge)
+    Ajouter éventuellement un résumé global dans la section “Meta” (ex. “Global: Borderline (WFA robuste, MC fragile)” si tu veux fusionner les labels) -->
+<!-- 5. Nouveaux graphiques WFA/OOS/Monte Carlo/Stability
+
+    Histogramme des Sharpe OOS
+    Créer une fonction render_oos_report dans reports/overfitting_report.py (analogue à render_wfa_report) :
+    Paramètres : summary_df, windows_df, output_path
+    Section “Résumé” : tableau des stats OOS (déjà existant)
+    Section “Histogramme Sharpe OOS” :
+    - [ ] Si go disponible : go.Histogram(x=windows_df["sharpe_ratio"])
+    - [ ] Sinon : pas de plot (simple fallback texte)
+    Section “Détails des fenêtres” : table HTML windows_df
+    Modifier_export_oos_results pour utiliser render_oos_report à la place de _build_html_report
+    Distribution des max drawdowns Monte Carlo
+    Créer une fonction render_monte_carlo_report :
+    Paramètres : summary_df, simulations_df, output_path
+    Section “Résumé” (table)
+    Section “Histogramme Sharpe” et/ou “Histogramme Max Drawdown” :
+    - [ ] Utiliser Plotly si dispo, sinon fallback texte
+    Section “Détails des simulations” : table HTML
+    Modifier _export_monte_carlo pour appeler render_monte_carlo_report
+    Heatmap relative_sharpe vs paramètre (stabilité)
+    Créer une fonction render_stability_report :
+    Paramètres : summary_df, neighbors_df, output_path
+    Section “Résumé” (table)
+    Pour la heatmap :
+    - [ ] Utiliser neighbors_df avec colonnes param_name, param_value, relative_sharpe
+    - [ ] Construire une matrice (par exemple, une heatmap par paramètre : x = param_value, y = param_name)
+    - [ ] Avec Plotly : go.Heatmap ou une série de go.Scatter si c’est plus simple
+    - [ ] Prevoir fallback sans plot si go absent
+    Section “Détails des voisins” : table HTML
+    Modifier _export_stability pour appeler render_stability_report au lieu de _build_html_report
+    Conserver_build_html_report comme fallback générique
+    Garder _build_html_report pour des usages simples (ou comme secours si Plotly échoue) -->
+6. Tests automatisés
+
+    Tests sur les nouvelles métriques WFA/OOS/Monte Carlo/Stability
+    Dans tests/unit/test_optimization/test_overfitting_check.py :
+    Ajouter un test pour vérifier que walk_forward_analysis remplit bien les champs degradation_ratio, frac_test_sharpe_lt_0, etc. dans summary
+    Ajouter un test pour _summarize_simulations qui vérifie p_sharpe_lt_0 / p_cagr_lt_0
+    Ajouter un test simple sur la logique de classification robustness_label (fonction pure ou helper dédié)
+    Tests sur le reporting
+    Ajouter un test pour render_overfitting_index qui vérifie que le badge HTML est bien présent en fonction de status
+    Ajouter des tests smoke (sans Plotly) pour render_oos_report, render_monte_carlo_report, render_stability_report :
+    - [ ] Vérifier que la fonction retourne bien un fichier HTML existant et non vide
+    - [ ] Vérifier que les tables sont bien présentes via quelques chaînes clés
+7. Documentation & ergonomie
+
+    Mettre à jour doc/optimization.md (section “Prévention de l’overfitting”)
+    Décrire les nouveaux indicateurs de robustesse (formules, interprétation)
+    Ajouter un exemple de lecture de l’index HTML avec les badges
+    Mettre à jour README.md
+    Mentionner explicitement que le module d’overfitting fournit :
+    - [ ] Ratios de dégradation, probabilités de sur‑ajustement, p‑values Monte Carlo
+    - [ ] Rapports HTML enrichis avec graphiques
+    (Option) Ajouter un petit paragraphe explicatif dans config/overfitting_*.yaml
+    Rappeler la signification des nouveaux indicateurs / seuils si certains sont paramétrables (ex. seuil drawdown, α)
 
 9.3 Hyperparameter tuning
 

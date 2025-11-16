@@ -59,6 +59,40 @@ analytics:
     risk_free_rate: 0.0          # taux sans risque (annuel)
     mar: 0.0                     # minimum acceptable return (annuel)
     rolling_window: 63           # fenêtre pour les métriques rolling (≈ 3 mois)
+    overfitting:
+        wfa:
+            alpha: 0.5
+            degradation_ratio:
+                robust_min: 0.8
+                overfit_max: 0.5
+            frac_test_sharpe_lt_alpha_train:
+                robust_max: 0.2
+                overfit_min: 0.5
+            frac_test_sharpe_lt_0:
+                robust_max: 0.3
+                overfit_min: 0.6
+        oos:
+            mean_sharpe:
+                robust_min: 1.0
+                overfit_max: 0.5
+            frac_sharpe_lt_0:
+                robust_max: 0.2
+                overfit_min: 0.5
+        monte_carlo:
+            p_sharpe_lt_0:
+                robust_max: 0.2
+                overfit_min: 0.5
+            p_cagr_lt_0:
+                robust_max: 0.2
+                overfit_min: 0.5
+            max_drawdown:
+                threshold: 0.3     # drawdown > 30%
+                robust_max: 0.2    # au plus 20% des simulations au-dessus du seuil
+                overfit_min: 0.5   # au moins 50% des simulations au-dessus du seuil
+        stability:
+            robust_fraction:
+                robust_min: 0.8
+                overfit_max: 0.5
 
 reporting:
     engine: plotly               # moteur de graphiques

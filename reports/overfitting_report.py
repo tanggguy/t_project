@@ -78,6 +78,33 @@ a:hover {
     padding: 16px;
     background: #111723;
 }
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.badge-robust {
+    background: #1f6f43;
+    color: #e4ffee;
+}
+.badge-borderline {
+    background: #8a6d1d;
+    color: #fff4d0;
+}
+.badge-overfitted {
+    background: #7b1e1e;
+    color: #ffe4e4;
+}
 .plot {
     margin-top: 24px;
 }
@@ -171,6 +198,94 @@ def _plot_wfa_delta(folds_df: pd.DataFrame) -> str:
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
+def _plot_histogram(
+    df: pd.DataFrame,
+    column: str,
+    *,
+    title: str,
+    xaxis_title: str,
+    include_js: bool,
+) -> str:
+    if go is None or df.empty or column not in df.columns:
+        return ""
+    series = pd.to_numeric(df[column], errors="coerce").dropna()
+    if series.empty:
+        return ""
+    fig = go.Figure(
+        data=go.Histogram(
+            x=series,
+            marker_color="#2ec4b6",
+            opacity=0.85,
+        )
+    )
+    fig.update_layout(
+        template="plotly_dark",
+        height=360,
+        title=title,
+        xaxis_title=xaxis_title,
+        yaxis_title="Fréquence",
+        margin=dict(t=50, r=20, b=40, l=50),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs="cdn" if include_js else False)
+
+
+def _plot_stability_heatmap(
+    neighbors_df: pd.DataFrame,
+    *,
+    include_js: bool,
+) -> str:
+    if go is None or neighbors_df.empty:
+        return ""
+    required_cols = {"param_name", "param_value", "relative_sharpe"}
+    if not required_cols.issubset(neighbors_df.columns):
+        return ""
+    subset = neighbors_df[list(required_cols)].dropna()
+    if subset.empty:
+        return ""
+    subset = subset.copy()
+    subset["param_value_label"] = subset["param_value"].map(str)
+
+    pivot = subset.pivot_table(
+        index="param_name",
+        columns="param_value_label",
+        values="relative_sharpe",
+        aggfunc="mean",
+    )
+    if pivot.empty:
+        return ""
+
+    def _sort_labels(labels: Iterable[str]) -> List[str]:
+        try:
+            sortable = [(float(label), label) for label in labels]
+            sortable.sort(key=lambda item: item[0])
+            return [label for _, label in sortable]
+        except ValueError:
+            return sorted(labels, key=str)
+
+    pivot = pivot.reindex(sorted(pivot.index, key=str))
+    sorted_columns = _sort_labels(list(pivot.columns))
+    pivot = pivot.reindex(columns=sorted_columns)
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=pivot.values,
+            x=pivot.columns.tolist(),
+            y=pivot.index.tolist(),
+            colorscale="Viridis",
+            colorbar=dict(title="Relative Sharpe"),
+        )
+    )
+    fig.update_layout(
+        template="plotly_dark",
+        height=420,
+        title="Heatmap des variations de paramètres",
+        xaxis_title="Valeur du paramètre",
+        yaxis_title="Paramètre",
+        margin=dict(t=60, r=60, b=60, l=80),
+    )
+    return fig.to_html(full_html=False, include_plotlyjs="cdn" if include_js else False)
+
+
 def render_wfa_report(
     summary_df: pd.DataFrame,
     folds_df: pd.DataFrame,
@@ -223,6 +338,131 @@ def render_wfa_report(
     return _write_html(out_path, title, body)
 
 
+def render_oos_report(
+    summary_df: pd.DataFrame,
+    windows_df: pd.DataFrame,
+    *,
+    output_path: Path | str,
+    title: str = "Out-of-Sample Testing",
+) -> Path:
+    out_path = Path(output_path)
+    summary_html = _table_html(summary_df)
+    windows_html = _table_html(windows_df)
+    histogram_html = _plot_histogram(
+        windows_df,
+        "sharpe_ratio",
+        title="Distribution des Sharpe OOS",
+        xaxis_title="Sharpe Ratio",
+        include_js=True,
+    )
+
+    hist_section = (
+        "<section class='section'>"
+        "<h2>Histogramme Sharpe OOS</h2>"
+        f"{histogram_html or '<p>Histogramme indisponible (Plotly absent ou données manquantes).</p>'}"
+        "</section>"
+    )
+
+    sections = [
+        f"<section class='section'><h2>Résumé</h2>{summary_html}</section>",
+        hist_section,
+        f"<section class='section'><h2>Détails des fenêtres</h2>{windows_html}</section>",
+    ]
+    body = (
+        f"<header><h1>{title}</h1><p>Analyse out-of-sample.</p></header>"
+        f"<div class='container'>{''.join(sections)}</div>"
+    )
+    return _write_html(out_path, title, body)
+
+
+def render_monte_carlo_report(
+    summary_df: pd.DataFrame,
+    simulations_df: pd.DataFrame,
+    *,
+    output_path: Path | str,
+    title: str = "Monte Carlo",
+) -> Path:
+    out_path = Path(output_path)
+    summary_html = _table_html(summary_df)
+    simulations_html = _table_html(simulations_df)
+
+    plot_sections: List[str] = []
+    include_js = True
+    for column, label in (
+        ("sharpe_ratio", "Histogramme Sharpe"),
+        ("max_drawdown", "Histogramme Max Drawdown"),
+    ):
+        plot_html = _plot_histogram(
+            simulations_df,
+            column,
+            title=label,
+            xaxis_title=label.replace("Histogramme ", ""),
+            include_js=include_js,
+        )
+        if plot_html:
+            include_js = False
+            plot_sections.append(
+                f"<div class='plot'><h3>{label}</h3>{plot_html}</div>"
+            )
+
+    if plot_sections:
+        plots_block = (
+            "<section class='section'>"
+            "<h2>Distributions simulées</h2>"
+            f"{''.join(plot_sections)}"
+            "</section>"
+        )
+    else:
+        plots_block = (
+            "<section class='section'>"
+            "<h2>Distributions simulées</h2>"
+            "<p>Visualisations indisponibles (Plotly absent ou données insuffisantes).</p>"
+            "</section>"
+        )
+
+    sections = [
+        f"<section class='section'><h2>Résumé</h2>{summary_html}</section>",
+        plots_block,
+        f"<section class='section'><h2>Détails des simulations</h2>{simulations_html}</section>",
+    ]
+    body = (
+        f"<header><h1>{title}</h1><p>Analyse Monte Carlo des métriques.</p></header>"
+        f"<div class='container'>{''.join(sections)}</div>"
+    )
+    return _write_html(out_path, title, body)
+
+
+def render_stability_report(
+    summary_df: pd.DataFrame,
+    neighbors_df: pd.DataFrame,
+    *,
+    output_path: Path | str,
+    title: str = "Stability Tests",
+) -> Path:
+    out_path = Path(output_path)
+    summary_html = _table_html(summary_df)
+    neighbors_html = _table_html(neighbors_df)
+    heatmap_html = _plot_stability_heatmap(neighbors_df, include_js=True)
+
+    heatmap_section = (
+        "<section class='section'>"
+        "<h2>Heatmap relative_sharpe</h2>"
+        f"{heatmap_html or '<p>Heatmap indisponible (Plotly absent ou données manquantes).</p>'}"
+        "</section>"
+    )
+
+    sections = [
+        f"<section class='section'><h2>Résumé</h2>{summary_html}</section>",
+        heatmap_section,
+        f"<section class='section'><h2>Détails des voisins</h2>{neighbors_html}</section>",
+    ]
+    body = (
+        f"<header><h1>{title}</h1><p>Analyse de sensibilité des paramètres.</p></header>"
+        f"<div class='container'>{''.join(sections)}</div>"
+    )
+    return _write_html(out_path, title, body)
+
+
 def render_overfitting_index(
     meta: Dict[str, Any],
     sections: Sequence[Dict[str, Any]],
@@ -232,19 +472,36 @@ def render_overfitting_index(
 ) -> Path:
     out_path = Path(output_path)
     cards_html = []
+    status_summary: List[str] = []
     for section in sections:
         link = section.get("path") or "#"
         description = section.get("description", "")
+        name = section.get("name", "Section")
+        status_value = section.get("status") or section.get("badge")
+        badge_html = ""
+        if status_value:
+            slug = str(status_value).lower().replace(" ", "-")
+            label = str(status_value).replace("-", " ").title()
+            badge_html = f"<span class='badge badge-{slug}'>{label}</span>"
+            status_summary.append(f"{name}: {label}")
         cards_html.append(
             f"""
             <div class=\"card\">
-              <h3><a href='{link}'>{section.get('name', 'Section')}</a></h3>
+              <div class="card-header">
+                <h3><a href='{link}'>{name}</a></h3>
+                {badge_html}
+              </div>
               <p>{description}</p>
             </div>
             """.strip()
         )
 
     meta_items = []
+    if status_summary:
+        global_text = ", ".join(status_summary)
+        meta_items.append(
+            f"<li><strong>global_summary:</strong> {global_text}</li>"
+        )
     for key, value in meta.items():
         if isinstance(value, dict):
             continue
@@ -260,4 +517,3 @@ def render_overfitting_index(
         f"</div>"
     )
     return _write_html(out_path, title, body)
-
