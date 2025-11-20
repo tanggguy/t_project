@@ -11,6 +11,7 @@ from typing import Any, Dict, Type
 import logging
 
 # --- 2. Bibliothèques tierces ---
+import optuna
 import yaml
 
 # --- Configuration du chemin de projet ---
@@ -151,6 +152,50 @@ def build_optimizer(config: Dict[str, Any]) -> OptunaOptimizer:
     return optimizer
 
 
+def run_optimization_from_yaml(
+    config_path: str,
+    *,
+    n_trials: int | None = None,
+    timeout: int | None = None,
+    n_jobs: int | None = None,
+    show_progress_bar: bool | None = None,
+) -> optuna.Study:
+    """
+    Lance une optimisation Optuna depuis un fichier YAML de configuration.
+
+    Cette fonction est une API Python propre qui peut être utilisée par d'autres
+    modules (ex: dashboard) sans passer par la CLI.
+
+    Args:
+        config_path: Chemin vers le fichier YAML de configuration.
+        n_trials: Nombre de trials à lancer (override la config YAML).
+        timeout: Timeout en secondes (override la config YAML).
+        n_jobs: Nombre de jobs parallèles Optuna (override la config YAML).
+        show_progress_bar: Afficher la barre de progression (override la config YAML).
+
+    Returns:
+        optuna.Study: L'étude Optuna complétée.
+
+    Raises:
+        FileNotFoundError: Si le fichier de configuration n'existe pas.
+        ValueError: Si la configuration est invalide.
+    """
+    config = load_config(config_path)
+    optimizer = build_optimizer(config)
+
+    logger.info("Configuration chargée depuis %s", config_path)
+
+    study = optimizer.optimize(
+        n_trials=n_trials,
+        timeout=timeout,
+        n_jobs=n_jobs,
+        show_progress_bar=show_progress_bar,
+    )
+
+    logger.info("Optimisation terminée")
+    return study
+
+
 def main() -> None:
     """Entrée principale de la CLI d'optimisation."""
 
@@ -189,19 +234,17 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    config = load_config(args.config)
-    optimizer = build_optimizer(config)
-
-    logger.info("Configuration chargée depuis %s", args.config)
-
-    study = optimizer.optimize(
+    study = run_optimization_from_yaml(
+        config_path=args.config,
         n_trials=args.n_trials,
         timeout=args.timeout,
         n_jobs=args.n_jobs,
         show_progress_bar=None if not args.no_progress_bar else False,
     )
 
-    logger.info("Optimisation terminée")
+    # Récupérer l'optimizer pour afficher les résultats (multi-objectif check)
+    config = load_config(args.config)
+    optimizer = build_optimizer(config)
 
     if getattr(optimizer, "is_multi_objective", False):
         pareto_trials = study.best_trials

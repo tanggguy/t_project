@@ -384,6 +384,144 @@ TODO COMPLET - Projet Trading Python : commenté = fait
     (Option) Ajouter un petit paragraphe explicatif dans config/overfitting_*.yaml
     Rappeler la signification des nouveaux indicateurs / seuils si certains sont paramétrables (ex. seuil drawdown, α) -->
 
+<!-- Dashboard web  de lancement des optimisation :
+-lancer des optimisations avec choix des stratégies, tickers, périodes et grille hyperparamètres
+-estimation du temps restant
+-visualisation ou lien vers des rapports html du backtest du meilleur essai
+-visualisation ou lien des rapports d'overfitting
+
+1. Architecture générale & emplacement
+
+ Décider de l’emplacement principal du dashboard Streamlit:visualization/dashboard.py (UI uniquement, sans logique métier Optuna/Backtest).
+ Introduire un petit module de “service” réutilisable pour lancer/monitorer les optimisations, par ex. optimization/dashboard_runner.py, appelé à la fois par Streamlit et éventuellement par d’autres outils.
+ Vérifier que tout nouveau code respecte le style PEP8, les annotations de type (typing), et utilise logging plutôt que print().
+2. API Python propre pour lancer une optimisation (sans casser la CLI)
+
+ Extraire dans scripts/run_optimization.py une fonction de haut niveau, par ex. run_optimization_from_yaml(config_path: str, *, n_trials: int | None = None, timeout: int | None = None, n_jobs: int | None = None, show_progress_bar: bool | None = None) -> optuna.Study, qui :
+ Utilise load_config() + build_optimizer() (déjà existants),
+ Appelle optimizer.optimize(...) avec les bons paramètres,
+ Ne fait aucun print() (la fonction retourne l’optuna.Study).
+ Adapter main() dans scripts/run_optimization.py pour :
+ Continuer à parser les arguments CLI exactement comme aujourd’hui,
+ Appeler run_optimization_from_yaml(...),
+ Gérer l’affichage CLI (prints) uniquement dans main() pour ne pas polluer l’API Python.
+ Vérifier que l’exécution via CLI (python scripts/run_optimization.py --config ...) donne exactement les mêmes sorties qu’avant (non-régression fonctionnelle).
+3. Service de gestion d’un “job d’optimisation”
+
+Dans un nouveau module (ex. optimization/dashboard_runner.py) :
+
+ Définir une dataclass, ex. OptimizationJobConfig, avec type hints, pour encapsuler :
+ config_path: Path,
+ n_trials, timeout, n_jobs,
+ study_name, storage_url (dérivés de la config YAML via OptunaOptimizer / study_config).
+ Définir une dataclass OptimizationJobStatus (ou similaire) avec :
+ status: Literal["idle", "running", "done", "failed"],
+ n_trials_planned: int | None,
+ n_trials_completed: int,
+ avg_trial_duration: float | None,
+ eta_seconds: float | None,
+ best_value: float | None,
+ best_params: dict[str, Any] | None,
+ last_update: datetime | None,
+ éventuellement error_message: str | None.
+ Implémenter une fonction start_optimization_job(job_cfg: OptimizationJobConfig) -> None qui :
+ Démarre l’optimisation dans un process séparé (ex. multiprocessing.Process ou subprocess.Popen qui appelle la CLI), pour ne pas bloquer le thread Streamlit,
+ Crée un fichier de “lock” ou un état persistant simple (ex. tmp-output/current_optimization.json) indiquant qu’un job est en cours.
+ Implémenter une fonction de lecture de statut :
+get_optimization_status(job_cfg: OptimizationJobConfig) -> OptimizationJobStatus qui :
+ Charge l’étude avec optuna.load_study(study_name=..., storage=...),
+ Calcule n_trials_completed = len([t for t in study.trials if t.state.is_finished()]),
+ Détermine n_trials_planned à partir de la config YAML (study_config["n_trials"] ou param override),
+ Calcule la durée moyenne par trial à partir de datetime_start / datetime_complete,
+ En déduit une ETA simple (n_planned - n_completed) * avg_duration,
+ Récupère best_value / best_params si disponibles,
+ Gère les cas edge (aucun trial terminé, étude absente, job en erreur) proprement, avec logging.
+ (Optionnel) Ajouter un petit cache en mémoire ou fichier JSON pour éviter de recharger l’étude trop fréquemment si cela s’avère coûteux.
+4. Sélection des stratégies, tickers, périodes, hyperparamètres dans le dashboard
+
+Dans visualization/dashboard.py (code Streamlit) :
+
+ Créer une fonction load_available_optimization_configs() -> dict[str, Path] qui :
+ Liste les fichiers config/optimization_*.yaml,
+ Retourne un mapping “nom lisible” → chemin du YAML.
+ Ajouter un sélecteur Streamlit (ex. st.selectbox) pour choisir un fichier d’optimisation YAML.
+ Charger la config sélectionnée et afficher :
+ Nom de la stratégie, module, class,
+ Tickers (mono/multi),
+ Période (start_date / end_date / interval),
+ Paramètres d’Optuna (n_trials, timeout, n_jobs).
+ Permettre d’overrider certains champs simples dans l’UI, dans l’esprit KISS :
+ n_trials, timeout, n_jobs,
+ éventuellement tickers, start_date, end_date (en restant prudents pour ne pas sur-complexifier).
+ Construire un OptimizationJobConfig à partir de la config YAML + overrides UI, et l’utiliser pour start_optimization_job(...).
+5. Estimation du temps restant & affichage en temps réel
+
+Toujours dans visualization/dashboard.py :
+
+ Mettre en place une section “Suivi de l’optimisation en cours” :
+ Utiliser st_autorefresh() ou un timer pour rafraîchir le statut toutes les X secondes (ex. 5–10s),
+ Appeler get_optimization_status(job_cfg) à chaque rafraîchissement.
+ Afficher :
+ Une barre de progression basée sur n_trials_completed / n_trials_planned,
+ L’ETA human-readable (minutes / heures restantes) à partir de eta_seconds,
+ La meilleure valeur trouvée (best_value) et quelques params clés (best_params).
+ Gérer les états :
+ idle → message “Aucune optimisation en cours”,
+ running → progression + ETA,
+ done → message de succès + liens vers rapports,
+ failed → message d’erreur lisible (error_message), avec logs.
+6. Backtest HTML du meilleur essai
+
+ Réutiliser le pipeline existant de backtest + rapports (scripts/run_backtest.py, reports/report_generator.py) sans dupliquer la logique.
+ Implémenter une fonction utilitaire (nouveau module ou extension de run_backtest.py) du style
+generate_best_trial_report(config_path: Path, best_params: dict[str, Any]) -> Path qui :
+ Charge la config de backtest de base (soit un YAML dédié, soit la partie “backtest” dans le YAML d’optimisation si prévu),
+ Fusionne les best_params Optuna avec les paramètres de la stratégie (merge_params existe déjà dans run_backtest.py),
+ Lance le backtest via les fonctions internes (pas forcément via la CLI) pour obtenir metrics/equity/trades,
+ Appelle reports.report_generator.generate_report(...),
+ Retourne le chemin du HTML généré (reports/generated/...).
+ Dans le dashboard Streamlit :
+ Ajouter un bouton “Générer rapport backtest (meilleur essai)” disponible quand le job est done et que best_params sont connus,
+ Appeler generate_best_trial_report(...) dans un contexte non bloquant si nécessaire,
+ Afficher soit :
+ un lien vers le fichier (st.markdown("[Voir rapport](file:///...)" ou équivalent adapté),
+ ou un st.components.v1.html(open(path).read(), height=...) pour intégration directe.
+7. Rapports d’overfitting
+
+ S’appuyer sur scripts/run_overfitting.py et optimization/overfitting_check.py, qui savent déjà :
+ Charger la stratégie + param_space,
+ Utiliser --use-best-params pour récupérer les paramètres optimaux à partir de best_params_path,
+ Générer des rapports HTML (WFA, OOS, Monte Carlo, Stability) dans results/overfitting/....
+ Ajouter dans visualization/dashboard.py :
+ Une section “Overfitting” affichée une fois l’optimisation terminée,
+ Un bouton “Lancer checks d’overfitting” qui :
+ Vérifie la présence du fichier best_params_path (config output.best_params_path dans le YAML d’optimisation),
+ Démarre un process séparé pour
+python scripts/run_overfitting.py --config <même YAML> --use-best-params,
+ Sauvegarde le répertoire racine des sorties (checker.output_root) ou l’infère à partir du log / convention (timestamp).
+ Implémenter une fonction locate_overfitting_index(config_path: Path) -> Path | None qui :
+ Inspecte results/overfitting/<run_id>/ pour trouver le dernier run (par timestamp),
+ Retourne index.html si présent.
+ Dans Streamlit :
+ Afficher un lien ou intégration HTML pour index.html (page globale overfitting),
+8. Gestion des erreurs & robustesse
+
+ Ajouter du logging cohérent (via utils.logger.setup_logger) pour :
+ Les démarrages de jobs (optimisation, overfitting),
+ Les erreurs de chargement de YAML,
+ Les problèmes de connexion à la base SQLite Optuna,
+ Les erreurs dans la génération de rapports HTML.
+ Dans le dashboard, afficher des messages utilisateurs clairs en cas d’erreur (sans stacktrace brute).
+ Prévoir un mécanisme simple pour “réinitialiser” l’état :
+ Bouton “Réinitialiser dashboard” qui efface l’état courant (fichiers de lock / job courant) et permet de relancer une optimisation proprement.
+9. Respect du manifeste GEMINI
+
+ Vérifier que tous les nouveaux modules/fonctions :
+ Ont des docstrings claires (Google/Numpy style) expliquant le “Pourquoi/Comment”.
+ Utilisent des noms explicites (optimization_job_status, generate_best_trial_report, etc.).
+ Restent simples (KISS) : éviter d’introduire un scheduler complexe ou une queue externe tant que ce n’est pas nécessaire.
+ Séparent la logique de données/optimisation (optimization/, scripts/) de la présentation (visualization/dashboard.py). -->
+
 🏗️ Phase 10 : Stratégies Avancées (Semaine 9-10)
 
 10.2 Stratégies complexes

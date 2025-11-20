@@ -62,3 +62,4 @@ avec couverture :
 pytest tests/unit/test_optimization/test_overfitting_check.py --cov=optimization.overfitting_check --cov-report=term-missing
 
 
+streamlit run visualization/dashboard.py

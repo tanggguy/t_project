@@ -317,3 +317,50 @@ wfa_summary = checker.walk_forward_analysis()
 ```
 
 Consultez ensuite `results/overfitting/<run_id>/<timestamp>/` pour les CSV (`*_summary.csv`, `*_folds.csv`, `monte_carlo_simulations.csv`, etc.) et l’index HTML enrichi de badges.
+
+---
+
+## 10. Dashboard d'Optimisation (Streamlit)
+
+Le projet inclut une interface graphique pour lancer, surveiller et analyser les optimisations sans toucher à la ligne de commande.
+
+### 10.1 Lancement
+
+```bash
+streamlit run visualization/dashboard.py
+```
+
+### 10.2 Fonctionnalités
+
+1.  **Sélection de Configuration** : Charge automatiquement les fichiers `config/optimization_*.yaml`.
+2.  **Éditeur de Paramètres (Overrides)** :
+    -   Permet de modifier à la volée les tickers, dates, et intervalles.
+    -   Détecte automatiquement l'espace de recherche (`param_space`) et génère des champs de saisie adaptés (sliders pour int/float, listes pour categorical).
+    -   Estime la taille de la grille de recherche (nombre de combinaisons discrètes).
+3.  **Monitoring Temps Réel** :
+    -   Affiche l'état du job (Running, Done, Failed).
+    -   **ETA Dynamique** : Calcule le temps restant estimé basé sur une moyenne mobile des 20 derniers essais.
+    -   **Barre de Progression** : Visualise l'avancement global.
+    -   Affiche les meilleurs paramètres et la meilleure valeur trouvée en direct.
+4.  **Actions Post-Optimisation** :
+    -   **Générer Rapport** : Lance un backtest complet avec les meilleurs paramètres et ouvre le rapport HTML.
+    -   **Overfitting Checks** : Lance les tests de robustesse (WFA, Monte Carlo, etc.) sur la meilleure configuration.
+
+### 10.3 Architecture Technique
+
+Le dashboard repose sur trois composants clés :
+
+#### A. Frontend (`visualization/dashboard.py`)
+Interface Streamlit qui gère les interactions utilisateur. Elle ne lance pas l'optimisation directement dans son processus, mais délègue cette tâche pour ne pas bloquer l'interface.
+
+#### B. Runner & State Management (`optimization/dashboard_runner.py`)
+Gère le cycle de vie du processus d'optimisation :
+-   **Job Config** : Construit une configuration d'exécution (`OptimizationJobConfig`).
+-   **Processus Détaché** : Lance `scripts/run_optimization.py` via `subprocess.Popen`.
+-   **Lock File** : Utilise un fichier `tmp-output/current_optimization.json` pour stocker le PID, le statut et les métriques de progression. Cela permet au dashboard de survivre à un redémarrage sans perdre la trace du job en cours.
+-   **ETA Calculation** : Implémente la logique d'estimation du temps restant (`_compute_eta`) en lisant l'historique des essais depuis la base Optuna.
+
+#### C. Système d'Overrides (`optimization/config_overrides.py`)
+Permet de modifier la configuration YAML de base sans altérer le fichier original :
+-   **`apply_overrides`** : Fonction qui prend un dictionnaire de config et applique des modifications ciblées sur `data`, `study`, et `strategy.param_space`.
+-   **Fichiers Temporaires** : Les configurations modifiées sont sauvegardées dans `tmp-output/dashboard_config_<timestamp>.yaml` et passées au script d'optimisation.

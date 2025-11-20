@@ -265,6 +265,7 @@ if bt is not None:
 
     class TradeListAnalyzer(bt.Analyzer):  # type: ignore
         def __init__(self):
+            super().__init__()  # Appeler le constructeur parent pour initialiser datas
             self.trades: List[Dict[str, Any]] = []
             self._open_trades: Dict[int, Dict[str, Any]] = {}
 

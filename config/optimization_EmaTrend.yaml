@@ -43,7 +43,7 @@ optimization:
     slippage_pct: 0.0005
 
   position_sizing:
-    enabled: false
+    enabled: true
     method: "fixed"
     fixed:
       pct_size: 0.4
@@ -77,7 +77,7 @@ optimization:
     #   fast_slow_gap: 1
 
   study:
-    study_name: "ema_trend_opt{23h20/12/11/2025}}"
+    study_name: "ema_trend_opt{19/11/2025}}"
     direction: "maximize"
     storage: "sqlite:///results/optimization/optuna_studies.db"
     load_if_exists: true
